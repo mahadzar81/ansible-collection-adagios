@@ -1,0 +1,11 @@
+WSGISocketPrefix /var/run/wsgi
+WSGIDaemonProcess adagios user=nagios group=nagios processes=1 threads=25
+WSGIScriptAlias /adagios /opt/adagios/adagios/wsgi.py
+
+<Location /adagios>
+    WSGIProcessGroup adagios
+    AuthName "Nagios Access"
+    AuthType Basic
+    AuthUserFile /usr/local/nagios/etc/htpasswd.users
+    Require valid-user
+</Location>

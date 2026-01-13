@@ -1,0 +1,21 @@
+---
+- name: Download Nagios Plugins
+  get_url:
+    url: "https://nagios-plugins.org/download/nagios-plugins-{{ nagios_plugins_version }}.tar.gz"
+    dest: "/tmp/nagios-plugins-{{ nagios_plugins_version }}.tar.gz"
+
+- name: Extract Nagios Plugins
+  unarchive:
+    src: "/tmp/nagios-plugins-{{ nagios_plugins_version }}.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+
+- name: Configure Nagios Plugins
+  command: "./configure --with-nagios-user={{ nagios_user }} --with-nagios-group={{ nagios_group }}"
+  args:
+    chdir: "/tmp/nagios-plugins-{{ nagios_plugins_version }}"
+
+- name: Compile and Install Plugins
+  shell: "make && make install"
+  args:
+    chdir: "/tmp/nagios-plugins-{{ nagios_plugins_version }}"

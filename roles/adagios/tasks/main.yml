@@ -1,0 +1,12 @@
+---
+- name: Load OS vars
+  include_vars: "{{ ansible_os_family }}.yml"
+
+- name: Install Adagios dependencies
+  package:
+    name: "{{ adagios_deps }}"
+    state: present
+
+- include_tasks: pnp4nagios.yml
+- include_tasks: livestatus.yml
+- include_tasks: adagios_install.yml

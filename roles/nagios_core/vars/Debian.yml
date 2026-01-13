@@ -1,0 +1,22 @@
+system_packages:
+  - autoconf
+  - gcc
+  - libc6
+  - libmcrypt-dev
+  - make
+  - libssl-dev
+  - wget
+  - bc
+  - gawk
+  - dc
+  - build-essential
+  - snmp
+  - libnet-snmp-perl
+  - gettext
+  - apache2
+  - php
+  - libapache2-mod-php
+  - libgd-dev
+  - unzip
+apache_service: apache2
+apache_conf_dir: /etc/apache2/sites-enabled

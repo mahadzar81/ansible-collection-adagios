@@ -1,0 +1,7 @@
+nagios_version: "4.5.0"
+nagios_plugins_version: "2.4.8"
+nagios_user: "nagios"
+nagios_group: "nagios"
+nagios_cmd_group: "nagcmd"
+nagios_home: "/usr/local/nagios"
+nagiosadmin_pass: "Welcome123" # Change this!

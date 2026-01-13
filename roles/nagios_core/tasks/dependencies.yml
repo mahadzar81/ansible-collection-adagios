@@ -1,0 +1,28 @@
+---
+- name: Install system dependencies
+  package:
+    name: "{{ system_packages }}"
+    state: present
+
+- name: Create Nagios user and group
+  group:
+    name: "{{ nagios_group }}"
+    state: present
+
+- name: Create Nagcmd group
+  group:
+    name: "{{ nagios_cmd_group }}"
+    state: present
+
+- name: Add Nagios user
+  user:
+    name: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    groups: "{{ nagios_cmd_group }}"
+    append: yes
+
+- name: Add Apache user to Nagcmd group
+  user:
+    name: "{{ 'apache' if ansible_os_family == 'RedHat' else 'www-data' }}"
+    groups: "{{ nagios_cmd_group }}"
+    append: yes

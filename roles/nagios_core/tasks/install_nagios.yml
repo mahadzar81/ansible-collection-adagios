@@ -1,0 +1,65 @@
+---
+- name: Download Nagios Core
+  get_url:
+    url: "https://assets.nagios.com/downloads/nagioscore/releases/nagios-{{ nagios_version }}.tar.gz"
+    dest: "/tmp/nagios-{{ nagios_version }}.tar.gz"
+
+- name: Extract Nagios Core
+  unarchive:
+    src: "/tmp/nagios-{{ nagios_version }}.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+
+- name: Configure Nagios Core
+  command: "./configure --with-command-group={{ nagios_cmd_group }}"
+  args:
+    chdir: "/tmp/nagios-{{ nagios_version }}"
+
+- name: Compile Nagios Core
+  command: make all
+  args:
+    chdir: "/tmp/nagios-{{ nagios_version }}"
+
+- name: Install Nagios binaries and HTML
+  command: "{{ item }}"
+  args:
+    chdir: "/tmp/nagios-{{ nagios_version }}"
+  with_items:
+    - make install
+    - make install-init
+    - make install-config
+    - make install-commandmode
+    - make install-webconf
+
+- name: Create nagiosadmin user for Web UI
+  htpasswd:
+    path: "{{ nagios_home }}/etc/htpasswd.users"
+    name: nagiosadmin
+    password: "{{ nagiosadmin_pass }}"
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: 0640
+
+- name: Enable Apache Rewrite module (Debian/Ubuntu only)
+  apache2_module:
+    state: present
+    name: rewrite
+  when: ansible_os_family == "Debian"
+
+- name: Enable CGI module (Debian/Ubuntu only)
+  apache2_module:
+    state: present
+    name: cgi
+  when: ansible_os_family == "Debian"
+
+- name: Start and enable Apache
+  service:
+    name: "{{ apache_service }}"
+    state: started
+    enabled: yes
+
+- name: Start and enable Nagios
+  service:
+    name: nagios
+    state: started
+    enabled: yes

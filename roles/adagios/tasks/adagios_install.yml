@@ -1,0 +1,41 @@
+---
+- name: Clone Adagios Repo
+  git:
+    repo: "{{ adagios_repo }}"
+    dest: /opt/adagios
+
+- name: Install Python requirements for Adagios
+  pip:
+    requirements: /opt/adagios/requirements.txt
+    executable: pip3
+
+- name: Install Adagios
+  command: "python3 setup.py install"
+  args:
+    chdir: /opt/adagios
+
+- name: Create Adagios config directory
+  file:
+    path: /etc/adagios
+    state: directory
+    owner: nagios
+    group: nagios
+
+- name: Copy sample config
+  copy:
+    src: /opt/adagios/adagios/etc/adagios/adagios.conf
+    dest: /etc/adagios/adagios.conf
+    remote_src: yes
+    force: no
+
+- name: Configure Adagios Apache Config
+  template:
+    src: adagios.conf.j2
+    dest: "{{ apache_conf_dir }}/adagios.conf"
+  notify: restart apache
+
+- name: Ensure Nagios group has write access to config
+  file:
+    path: /usr/local/nagios/etc
+    recurse: yes
+    mode: 'g+w'

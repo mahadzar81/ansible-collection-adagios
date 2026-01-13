@@ -1,0 +1,11 @@
+---
+- name: Deploy Nagios Core and Adagios
+  hosts: monitoring_servers
+  become: yes
+  vars:
+    # Override defaults here if needed
+    nagiosadmin_pass: "SecretPass123"
+
+  roles:
+    - nagios_core
+    - adagios

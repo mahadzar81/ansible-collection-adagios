@@ -1,0 +1,23 @@
+---
+- name: Download MK Livestatus
+  get_url:
+    url: "https://download.checkmk.com/checkmk/{{ livestatus_version }}/mk-livestatus-{{ livestatus_version }}.tar.gz"
+    dest: "/tmp/mk-livestatus.tar.gz"
+
+- name: Extract Livestatus
+  unarchive:
+    src: "/tmp/mk-livestatus.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+
+- name: Compile Livestatus
+  shell: "./configure --with-nagios4 && make && make install"
+  args:
+    chdir: "/tmp/mk-livestatus-{{ livestatus_version }}"
+
+- name: Add Livestatus broker to Nagios config
+  lineinfile:
+    path: /usr/local/nagios/etc/nagios.cfg
+    line: "broker_module=/usr/local/lib/mk-livestatus/livestatus.o /usr/local/nagios/var/rw/live"
+    state: present
+  notify: restart nagios

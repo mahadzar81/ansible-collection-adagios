@@ -1,0 +1,8 @@
+adagios_deps:
+  - python3
+  - python3-devel
+  - python3-pip
+  - git
+  - rrdtool
+  - rrdtool-perl
+  - perl-Time-HiRes
