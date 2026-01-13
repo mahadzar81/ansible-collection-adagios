@@ -1,6 +1,4 @@
 ### `ansible-collection-adagios/README.md`
-
-```markdown
 # Monitoring Ansible Collection
 
 ![Ansible](https://img.shields.io/badge/ansible-2.9%2B-red) ![Nagios](https://img.shields.io/badge/nagios-4.x-blue) ![Adagios](https://img.shields.io/badge/adagios-latest-green) ![Platform](https://img.shields.io/badge/platform-RHEL%20%7C%20Debian-lightgrey)
@@ -31,24 +29,18 @@ This collection is tested and designed for:
 ### 1. Installation
 Clone this repository or install the collection locally:
 
-```bash
 # From source
 git https://github.com/mahadzar81/ansible-collection-adagios.git
 cd ansible-collection-adagios
 ansible-galaxy collection build
 ansible-galaxy collection install cd ansible-collection-adagiosion-1.0.0.tar.gz
 
-```
-
 ### 2. Inventory Setup
 
 Create an `inventory` file:
 
-```ini
 [monitoring_servers]
 192.168.1.50 ansible_user=root
-
-```
 
 ### 3. Playbook Usage
 
@@ -74,11 +66,10 @@ Create a playbook named `monitor_stack.yml`:
 
 ### 4. Run Deployment
 
-```bash
+```
 ansible-playbook -i inventory monitor_stack.yml
 
 ```
-
 ---
 
 ## 🔧 Role Variables
