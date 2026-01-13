@@ -1,5 +1,5 @@
 ### `ansible-collection-adagios/README.md`
-# Monitoring Ansible Collection
+# Adagios Ansible Collection
 
 ![Ansible](https://img.shields.io/badge/ansible-2.9%2B-red) ![Nagios](https://img.shields.io/badge/nagios-4.x-blue) ![Adagios](https://img.shields.io/badge/adagios-latest-green) ![Platform](https://img.shields.io/badge/platform-RHEL%20%7C%20Debian-lightgrey)
 
