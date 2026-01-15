@@ -1,0 +1,16 @@
+---
+- name: Converge
+  hosts: all
+  become: yes
+  vars:
+    # Overriding the default password for the test environment
+    nagiosadmin_pass: "MoleculeTest123"
+
+  tasks:
+    - name: "Include Nagios Core Role"
+      include_role:
+        name: "mahadzar81.adagios.nagios_core"
+
+    - name: "Include Adagios Role"
+      include_role:
+        name: "mahadzar81.adagios.adagios"

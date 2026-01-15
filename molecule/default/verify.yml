@@ -1,0 +1,49 @@
+---
+- name: Verify
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  tasks:
+    - name: Check if Nagios Service is running
+      service:
+        name: nagios
+        state: started
+        enabled: yes
+      check_mode: yes
+      register: nagios_service_status
+
+    - name: Assert Nagios is running
+      assert:
+        that: not nagios_service_status.changed
+
+    - name: Check if Web Server (Apache/Httpd) is running
+      service:
+        name: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
+        state: started
+      check_mode: yes
+      register: apache_service_status
+
+    - name: Assert Apache is running
+      assert:
+        that: not apache_service_status.changed
+
+    - name: Verify Nagios Binary Version
+      command: /usr/local/nagios/bin/nagios --version
+      register: nagios_version_check
+      changed_when: false
+
+    - name: Assert Nagios 4.x is installed
+      assert:
+        that: "'Nagios Core 4' in nagios_version_check.stdout"
+
+    - name: Verify Adagios HTTP Endpoint (returns 401 because auth is on)
+      uri:
+        url: http://localhost/adagios/
+        status_code: 401
+      register: adagios_http
+
+    - name: Verify Nagios HTTP Endpoint (returns 401 because auth is on)
+      uri:
+        url: http://localhost/nagios/
+        status_code: 401
