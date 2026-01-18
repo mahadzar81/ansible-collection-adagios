@@ -2,6 +2,13 @@
 - name: Load OS vars
   include_vars: "{{ ansible_os_family }}.yml"
 
+- name: Enable CRB using community module for RHEL/Rocky
+  become: true
+  community.general.dnf_config_manager:
+    name: crb
+    state: enabled
+  when: ansible_os_family == "RedHat"
+
 - name: Install Adagios dependencies
   package:
     name: "{{ adagios_deps }}"

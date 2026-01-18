@@ -24,13 +24,27 @@
   command: "{{ item }}"
   args:
     chdir: "/tmp/nagios-{{ nagios_version }}"
+    # This prevents the task from failing if the webconf is already there
+    creates: "{{ '/etc/apache2/sites-enabled/nagios.conf' if item == 'make install-webconf' else omit }}"
   with_items:
     - make install
     - make install-init
-    - make install-config
     - make install-commandmode
+    - make install-config
     - make install-webconf
+    
+- name: Ensure passlib is installed (RHEL/CentOS)
+  dnf:
+    name: python3-passlib
+    state: present
+  when: ansible_os_family == "RedHat"
 
+- name: Ensure passlib is installed (Ubuntu/Debian)
+  apt:
+    name: python3-passlib
+    state: present
+  when: ansible_os_family == "Debian"
+  
 - name: Create nagiosadmin user for Web UI
   htpasswd:
     path: "{{ nagios_home }}/etc/htpasswd.users"

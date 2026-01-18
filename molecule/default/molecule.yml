@@ -33,8 +33,9 @@ provisioner:
   playbooks:
     converge: converge.yml
     verify: verify.yml
-#  config_options:
-#    defaults:
+  config_options:
+    defaults:
+      remote_tmp: /tmp/ansible-tmp
 #      stdout_callback: yaml
       # Increase timeout for source compilation
       # timeout: 60

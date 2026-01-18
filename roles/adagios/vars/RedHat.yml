@@ -4,5 +4,10 @@ adagios_deps:
   - python3-pip
   - git
   - rrdtool
+  - rrdtool-devel
   - rrdtool-perl
+  - boost-devel
   - perl-Time-HiRes
+  - libstdc++-static
+  - glibc-static
+  - python3-mod_wsgi

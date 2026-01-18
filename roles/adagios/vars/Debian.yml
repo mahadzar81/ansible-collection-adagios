@@ -4,4 +4,9 @@ adagios_deps:
   - python3-pip
   - git
   - rrdtool
+  - librrd-dev
   - librrds-perl
+  - build-essential
+  - libboost-dev
+  - libboost-system-dev
+  - libapache2-mod-wsgi-py3

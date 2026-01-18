@@ -1,19 +1,27 @@
 ---
 - name: Download MK Livestatus
   get_url:
-    url: "https://download.checkmk.com/checkmk/{{ livestatus_version }}/mk-livestatus-{{ livestatus_version }}.tar.gz"
-    dest: "/tmp/mk-livestatus.tar.gz"
+    #url: "https://download.checkmk.com/checkmk/archive/{{ livestatus_version }}/mk-livestatus-{{ livestatus_version }}.tar.gz"
+    # Download from Alternative (GitHub Mirror) since checkmk URL require authentication
+    url: "https://github.com/Expensify/mk_livestatus/archive/refs/heads/main.zip"
+    dest: "/tmp/main.zip"
+    timeout: 30
+  register: download_result
+  until: download_result is succeeded
+  retries: 2
 
 - name: Extract Livestatus
   unarchive:
-    src: "/tmp/mk-livestatus.tar.gz"
+    #src: "/tmp/mk-livestatus.tar.gz"
+    src: "/tmp/main.zip"
     dest: "/tmp"
     remote_src: yes
 
 - name: Compile Livestatus
   shell: "./configure --with-nagios4 && make && make install"
   args:
-    chdir: "/tmp/mk-livestatus-{{ livestatus_version }}"
+    #chdir: "/tmp/mk-livestatus-{{ livestatus_version }}"
+    chdir: "/tmp/mk_livestatus-main"
 
 - name: Add Livestatus broker to Nagios config
   lineinfile:

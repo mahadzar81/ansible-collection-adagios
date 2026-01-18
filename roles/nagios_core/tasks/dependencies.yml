@@ -3,6 +3,7 @@
   package:
     name: "{{ system_packages }}"
     state: present
+    update_cache: yes
 
 - name: Create Nagios user and group
   group:
