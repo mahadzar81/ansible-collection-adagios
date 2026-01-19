@@ -34,8 +34,14 @@ Clone this repository or install the collection locally:
 git https://github.com/mahadzar81/ansible-collection-adagios.git
 cd ansible-collection-adagios
 ansible-galaxy collection build
-ansible-galaxy collection install cd ansible-collection-adagiosion-1.0.0.tar.gz
+ansible-galaxy collection install 
+cd ansible-collection-adagios
 ```
+# Using ansible galaxy
+```
+ansible-galaxy collection install mahadzar81.adagios
+```
+
 ### 2. Inventory Setup
 
 Create an `inventory` file:

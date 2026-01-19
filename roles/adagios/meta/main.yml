@@ -1,0 +1,14 @@
+# roles/adagios/meta/main.yml
+---
+galaxy_info:
+  author: mahadzar81
+  description: Adagios installation and configuration
+  license: GPL-3.0-or-later
+  min_ansible_version: "2.14"
+  platforms:
+    - name: EL
+      versions:
+        - 8
+        - 9
+  categories:
+    - monitoring
