@@ -1,0 +1,42 @@
+name: Molecule CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  molecule:
+    name: Molecule
+    runs-on: ubuntu-latest
+    
+    # Define your collection metadata here to match galaxy.yml
+    env:
+      NAMESPACE: mahadzar81
+      COLLECTION_NAME: adagios
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          path: ansible_collections/${{ env.NAMESPACE }}/${{ env.COLLECTION_NAME }}
+
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-core molecule molecule-plugins[docker] docker
+
+      - name: Run Molecule tests
+        # We must run molecule from inside the correct collection directory
+        working-directory: ansible_collections/${{ env.NAMESPACE }}/${{ env.COLLECTION_NAME }}
+        run: molecule test
+        env:
+          PY_COLORS: '1'
+          ANSIBLE_FORCE_COLOR: '1'
