@@ -46,7 +46,7 @@
   when: ansible_os_family == "Debian"
   
 - name: Create nagiosadmin user for Web UI
-  htpasswd:
+  community.general.htpasswd:
     path: "{{ nagios_home }}/etc/htpasswd.users"
     name: nagiosadmin
     password: "{{ nagiosadmin_pass }}"

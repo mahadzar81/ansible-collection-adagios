@@ -33,6 +33,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install ansible-core molecule molecule-plugins[docker] docker
 
+      - name: Install Ansible collections
+        run: ansible-galaxy collection install community.general
+
       - name: Run Molecule tests
         # We must run molecule from inside the correct collection directory
         working-directory: ansible_collections/${{ env.NAMESPACE }}/${{ env.COLLECTION_NAME }}

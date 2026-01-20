@@ -40,6 +40,7 @@ cd ansible-collection-adagios
 # Using ansible galaxy
 ```
 ansible-galaxy collection install mahadzar81.adagios
+ansible-galaxy collection install community.general
 ```
 
 ### 2. Inventory Setup

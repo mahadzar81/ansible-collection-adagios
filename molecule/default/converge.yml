@@ -1,7 +1,7 @@
 ---
 - name: Converge
   hosts: all
-  become: yes
+  become: false
   vars:
     # Overriding the default password for the test environment
     nagiosadmin_pass: "MoleculeTest123"
