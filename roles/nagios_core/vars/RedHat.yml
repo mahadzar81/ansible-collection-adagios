@@ -17,5 +17,6 @@ system_packages:
   - openssl-devel
   - net-snmp
   - net-snmp-utils
+  - python3-passlib
 apache_service: httpd
 apache_conf_dir: /etc/httpd/conf.d

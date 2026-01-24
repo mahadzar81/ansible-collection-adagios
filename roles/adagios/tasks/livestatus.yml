@@ -1,28 +1,48 @@
 ---
-- name: Download MK Livestatus
-  get_url:
-    #url: "https://download.checkmk.com/checkmk/archive/{{ livestatus_version }}/mk-livestatus-{{ livestatus_version }}.tar.gz"
-    # Download from Alternative (GitHub Mirror) since checkmk URL require authentication
-    url: "https://github.com/Expensify/mk_livestatus/archive/refs/heads/main.zip"
-    dest: "/tmp/main.zip"
-    timeout: 30
-  register: download_result
-  until: download_result is succeeded
-  retries: 2
+# 1. Check if the compiled object already exists
+- name: Check if Livestatus is already installed
+  stat:
+    path: "/usr/local/lib/mk-livestatus/livestatus.o"
+  register: livestatus_binary
 
-- name: Extract Livestatus
-  unarchive:
-    #src: "/tmp/mk-livestatus.tar.gz"
-    src: "/tmp/main.zip"
-    dest: "/tmp"
-    remote_src: yes
+# 2. Group the download and compile tasks
+# These only run if the binary was NOT found in the previous step
+- name: Install MK Livestatus
+  block:
+    - name: Download MK Livestatus
+      get_url:
+        #url: "https://download.checkmk.com/checkmk/archive/{{ livestatus_version }}/mk-livestatus-{{ livestatus_version }}.tar.gz"
+        # Download from Alternative (GitHub Mirror) since checkmk URL require authentication
+        url: "https://github.com/Expensify/mk_livestatus/archive/refs/heads/main.zip"
+        dest: "/tmp/main.zip"
+        timeout: 30
+      register: download_result
+      until: download_result is succeeded
+      retries: 2
 
-- name: Compile Livestatus
-  shell: "./configure --with-nagios4 && make && make install"
-  args:
-    #chdir: "/tmp/mk-livestatus-{{ livestatus_version }}"
-    chdir: "/tmp/mk_livestatus-main"
+    - name: Extract Livestatus
+      unarchive:
+        src: "/tmp/main.zip"
+        dest: "/tmp"
+        remote_src: yes
+        # create: prevents re-extraction if the directory exists (optional, but good for speed)
+        creates: "/tmp/mk_livestatus-main"
 
+    - name: Compile and Install Livestatus
+      shell: "./configure --with-nagios4 && make && make install"
+      args:
+        chdir: "/tmp/mk_livestatus-main"
+        # CRITICAL: This ensures the shell command is skipped if the file exists
+        creates: "/usr/local/lib/mk-livestatus/livestatus.o"
+
+    - name: Cleanup downloaded archive
+      file:
+        path: "/tmp/main.zip"
+        state: absent
+  # The 'when' condition applies to the whole block
+  when: not livestatus_binary.stat.exists
+
+# 3. Configure Nagios (Run this always to ensure config consistency)
 - name: Add Livestatus broker to Nagios config
   lineinfile:
     path: /usr/local/nagios/etc/nagios.cfg

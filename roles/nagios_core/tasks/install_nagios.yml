@@ -3,56 +3,92 @@
   get_url:
     url: "https://assets.nagios.com/downloads/nagioscore/releases/nagios-{{ nagios_version }}.tar.gz"
     dest: "/tmp/nagios-{{ nagios_version }}.tar.gz"
+    mode: 0644
 
 - name: Extract Nagios Core
   unarchive:
     src: "/tmp/nagios-{{ nagios_version }}.tar.gz"
     dest: "/tmp"
     remote_src: yes
+    creates: "/tmp/nagios-{{ nagios_version }}/configure"
 
 - name: Configure Nagios Core
   command: "./configure --with-command-group={{ nagios_cmd_group }}"
   args:
     chdir: "/tmp/nagios-{{ nagios_version }}"
+    creates: "/tmp/nagios-{{ nagios_version }}/Makefile"
 
 - name: Compile Nagios Core
   command: make all
   args:
     chdir: "/tmp/nagios-{{ nagios_version }}"
+    creates: "/tmp/nagios-{{ nagios_version }}/base/nagios"
 
-- name: Install Nagios binaries and HTML
-  command: "{{ item }}"
+- name: Install Nagios Binaries
+  command: make install
   args:
     chdir: "/tmp/nagios-{{ nagios_version }}"
-    # This prevents the task from failing if the webconf is already there
-    creates: "{{ '/etc/apache2/sites-enabled/nagios.conf' if item == 'make install-webconf' else omit }}"
-  with_items:
-    - make install
-    - make install-init
-    - make install-commandmode
-    - make install-config
-    - make install-webconf
-    
-- name: Ensure passlib is installed (RHEL/CentOS)
-  dnf:
-    name: python3-passlib
-    state: present
-  when: ansible_os_family == "RedHat"
+    creates: "{{ nagios_home }}/bin/nagios"
 
-- name: Ensure passlib is installed (Ubuntu/Debian)
-  apt:
-    name: python3-passlib
-    state: present
-  when: ansible_os_family == "Debian"
-  
-- name: Create nagiosadmin user for Web UI
+- name: Install Nagios Init Script
+  command: make install-init
+  args:
+    chdir: "/tmp/nagios-{{ nagios_version }}"
+    creates: "/lib/systemd/system/nagios.service"
+
+- name: Install Nagios Command Mode
+  command: make install-commandmode
+  args:
+    chdir: "/tmp/nagios-{{ nagios_version }}"
+    creates: "{{ nagios_home }}/var/rw"
+
+- name: Install Nagios Config Files
+  command: make install-config
+  args:
+    chdir: "/tmp/nagios-{{ nagios_version }}"
+    creates: "{{ nagios_home }}/etc/nagios.cfg"
+
+- name: Set Apache config directory based on OS
+  set_fact:
+    apache_conf_dir: "{{ '/etc/apache2/sites-enabled' if ansible_os_family == 'Debian' else '/etc/httpd/conf.d' }}"
+
+- name: Install Nagios Web Config
+  command: make install-webconf
+  args:
+    chdir: "/tmp/nagios-{{ nagios_version }}"
+    creates: "{{ apache_conf_dir }}/nagios.conf"
+
+# - name: Create nagiosadmin user for Web UI
+#   community.general.htpasswd:
+#     path: "{{ nagios_home }}/etc/htpasswd.users"
+#     name: nagiosadmin
+#     password: "{{ nagiosadmin_pass | trim }}"
+#     owner: "{{ nagios_user }}"
+#     group: "{{ nagios_group }}"
+#     mode: "0640"
+#     state: present
+#     create: yes
+#     crypt_scheme: apr_md5_crypt
+
+- name: Check if nagiosadmin user already exists
+  ansible.builtin.command: "grep -q '^nagiosadmin:' {{ nagios_home }}/etc/htpasswd.users"
+  register: user_exists
+  failed_when: false
+  changed_when: false
+  check_mode: no
+
+- name: Create nagiosadmin user for Web UI (Only if not exist)
   community.general.htpasswd:
     path: "{{ nagios_home }}/etc/htpasswd.users"
     name: nagiosadmin
-    password: "{{ nagiosadmin_pass }}"
+    password: "{{ nagiosadmin_pass | trim }}"
     owner: "{{ nagios_user }}"
     group: "{{ nagios_group }}"
-    mode: 0640
+    mode: "0640"
+    state: present
+    create: yes
+    crypt_scheme: apr_md5_crypt
+  when: user_exists.rc != 0
 
 - name: Enable Apache Rewrite module (Debian/Ubuntu only)
   apache2_module:
@@ -66,6 +102,7 @@
     name: cgi
   when: ansible_os_family == "Debian"
 
+# SERVICES
 - name: Start and enable Apache
   service:
     name: "{{ apache_service }}"

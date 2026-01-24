@@ -3,16 +3,8 @@
   git:
     repo: "{{ adagios_repo }}"
     dest: /opt/adagios
-
-- name: Install Python requirements for Adagios
-  pip:
-    requirements: /opt/adagios/requirements.txt
-    executable: pip3
-
-- name: Install Adagios
-  command: "python3 setup.py install"
-  args:
-    chdir: /opt/adagios
+    version: master 
+    update: yes
 
 - name: Create Adagios config directory
   file:
@@ -20,13 +12,38 @@
     state: directory
     owner: nagios
     group: nagios
+    mode: '0775'
 
-- name: Copy sample config
+- name: Copy sample config if not present
   copy:
     src: /opt/adagios/adagios/etc/adagios/adagios.conf
     dest: /etc/adagios/adagios.conf
     remote_src: yes
     force: no
+
+- name: Install Python build tools and requirements
+  pip:
+    name: 
+      - wheel
+      - setuptools
+      - future
+    executable: pip3
+    state: present
+
+- name: Install Adagios requirements from file
+  pip:
+    requirements: /opt/adagios/requirements.txt
+    executable: pip3
+
+- name: Install Adagios from source
+  pip:
+    name: /opt/adagios
+    executable: pip3
+    state: present
+    extra_args: "--no-build-isolation"
+    chdir: /opt/adagios
+  register: pip_install
+  changed_when: "'Requirement already satisfied' not in pip_install.stdout"
 
 - name: Configure Adagios Apache Config
   template:
@@ -34,8 +51,15 @@
     dest: "{{ apache_conf_dir }}/adagios.conf"
   notify: restart apache
 
-- name: Ensure Nagios group has write access to config
-  file:
+- name: Ensure Nagios group has write access to config (Idempotent version)
+  ansible.builtin.file:
     path: /usr/local/nagios/etc
+    state: directory
     recurse: yes
-    mode: 'g+w'
+    mode: 'u=rwX,g=rwX,o=rX' # Explicitly defines the whole state
+
+# - name: Ensure Nagios group has write access to config
+#   file:
+#     path: /usr/local/nagios/etc
+#     recurse: yes
+#     mode: 'g+w' 

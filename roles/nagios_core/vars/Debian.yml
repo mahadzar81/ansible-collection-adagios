@@ -18,5 +18,6 @@ system_packages:
   - libapache2-mod-php
   - libgd-dev
   - unzip
+  - python3-passlib
 apache_service: apache2
 apache_conf_dir: /etc/apache2/sites-enabled
