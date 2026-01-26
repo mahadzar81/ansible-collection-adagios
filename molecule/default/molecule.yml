@@ -10,6 +10,8 @@ platforms:
   - name: nagios-rhel
     image: geerlingguy/docker-rockylinux9-ansible:latest
     pre_build_image: true
+    # FIX: Force connection as root to bypass sudo password prompts
+    user: root
     # Systemd capability requirements
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
