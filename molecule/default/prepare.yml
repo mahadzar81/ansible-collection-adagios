@@ -1,0 +1,10 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Ensure sudoers.d is permissive for CI
+      raw: |
+        mkdir -p /etc/sudoers.d
+        echo "ALL ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/molecule
+        chmod 0440 /etc/sudoers.d/molecule
