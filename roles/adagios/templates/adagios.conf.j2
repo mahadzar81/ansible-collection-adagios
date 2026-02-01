@@ -1,7 +1,7 @@
+WSGIPythonPath /opt/adagios:/opt/adagios/adagios
 WSGISocketPrefix /var/run/wsgi
-WSGIDaemonProcess adagios user=nagios group=nagios processes=1 threads=25
+WSGIDaemonProcess adagios python-path=/opt/adagios:/opt/adagios/adagios
 WSGIScriptAlias /adagios /opt/adagios/adagios/wsgi.py
-
 <Location /adagios>
     WSGIProcessGroup adagios
     AuthName "Nagios Access"
