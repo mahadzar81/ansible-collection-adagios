@@ -14,6 +14,33 @@
     group: nagios
     mode: '0775'
 
+- name: Create Adagios data and userdata directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: nagios
+    group: nagios
+    mode: '0775'
+  loop:
+    - /var/lib/adagios
+    - /var/lib/adagios/userdata
+
+- name: Create Adagios object directory
+  file:
+    path: /etc/nagios/adagios
+    state: directory
+    owner: nagios
+    group: nagios
+    mode: '0775'
+
+- name: Ensure nagios.cfg includes the Adagios object directory
+  lineinfile:
+    path: /usr/local/nagios/etc/nagios.cfg
+    regexp: '^cfg_dir=/etc/nagios/adagios'
+    line: 'cfg_dir=/etc/nagios/adagios'
+    state: present
+  notify: restart nagios
+
 - name: Copy sample config if not present
   copy:
     src: /opt/adagios/adagios/etc/adagios/adagios.conf
@@ -45,6 +72,22 @@
   register: pip_install
   changed_when: "'Requirement already satisfied' not in pip_install.stdout"
 
+- name: Configure Adagios to use the correct nagios.cfg path
+  lineinfile:
+    path: /etc/adagios/adagios.conf
+    regexp: '^\s*nagios_config\s*='
+    line: 'nagios_config = "/usr/local/nagios/etc/nagios.cfg"'
+    state: present
+  notify: restart apache
+
+- name: Configure Adagios destination directory
+  lineinfile:
+    path: /etc/adagios/adagios.conf
+    regexp: '^\s*destination_directory\s*='
+    line: 'destination_directory = "/etc/nagios/adagios/"'
+    state: present
+  notify: restart apache
+
 - name: Configure Adagios Apache Config
   template:
     src: adagios.conf.j2
@@ -56,10 +99,4 @@
     path: /usr/local/nagios/etc
     state: directory
     recurse: yes
-    mode: 'u=rwX,g=rwX,o=rX' # Explicitly defines the whole state
-
-# - name: Ensure Nagios group has write access to config
-#   file:
-#     path: /usr/local/nagios/etc
-#     recurse: yes
-#     mode: 'g+w' 
+    mode: 'u=rwX,g=rwX,o=rX'
