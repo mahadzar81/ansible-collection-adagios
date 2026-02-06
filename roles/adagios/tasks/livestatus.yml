@@ -13,7 +13,7 @@
       get_url:
         #url: "https://download.checkmk.com/checkmk/archive/{{ livestatus_version }}/mk-livestatus-{{ livestatus_version }}.tar.gz"
         # Download from Alternative (GitHub Mirror) since checkmk URL require authentication
-        url: "https://github.com/Expensify/mk_livestatus/archive/refs/heads/main.zip"
+        url: "https://github.com/EdCa361/mk_livestatus-for-Nagios-4.5.X/archive/refs/heads/main.zip"
         dest: "/tmp/main.zip"
         timeout: 30
       register: download_result
@@ -26,13 +26,16 @@
         dest: "/tmp"
         remote_src: yes
         # create: prevents re-extraction if the directory exists (optional, but good for speed)
-        creates: "/tmp/mk_livestatus-main"
+        creates: "/tmp/mk_livestatus-for-Nagios-4.5.X-main"
 
-    - name: Compile and Install Livestatus
-      shell: "./configure --with-nagios4 && make && make install"
+    - name: Compile and install MK Livestatus
+      shell: |
+        make distclean || make clean || true
+        ./configure --disable-dependency-tracking
+        make
+        make install
       args:
-        chdir: "/tmp/mk_livestatus-main"
-        # CRITICAL: This ensures the shell command is skipped if the file exists
+        chdir: /tmp/mk_livestatus-for-Nagios-4.5.X-main
         creates: "/usr/local/lib/mk-livestatus/livestatus.o"
 
     - name: Cleanup downloaded archive
