@@ -56,12 +56,56 @@
       - future
     executable: pip3
     state: present
+    extra_args: >-
+      {% set use_break = false %}
+      {% if ansible_distribution == 'Ubuntu' and ansible_distribution_version is version('23.04', '>=') %}
+        {% set use_break = true %}
+      {% elif ansible_distribution == 'Debian' and ansible_distribution_major_version is version('12', '>=') %}
+        {% set use_break = true %}
+      {% elif ansible_os_family == 'RedHat' and ansible_distribution_major_version is version('10', '>=') %}
+        {% set use_break = true %}
+      {% endif %}
+      {{ '--break-system-packages' if use_break else '' }}
+
 
 - name: Install Adagios requirements from file
   pip:
     requirements: /opt/adagios/requirements.txt
     executable: pip3
+    extra_args: >-
+      {% set use_break = false %}
+      {% if ansible_distribution == 'Ubuntu' and ansible_distribution_version is version('23.04', '>=') %}
+        {% set use_break = true %}
+      {% elif ansible_distribution == 'Debian' and ansible_distribution_major_version is version('12', '>=') %}
+        {% set use_break = true %}
+      {% elif ansible_os_family == 'RedHat' and ansible_distribution_major_version is version('10', '>=') %}
+        {% set use_break = true %}
+      {% endif %}
+      {{ '--break-system-packages' if use_break else '' }}
 
+- name: Ensure python3-future is installed (dependency for build)
+  pip:
+    name: future
+    executable: pip3
+    state: present
+    extra_args: >-
+      {% set use_break = false %}
+      {% if ansible_distribution == 'Ubuntu' and ansible_distribution_version is version('23.04', '>=') %}
+        {% set use_break = true %}
+      {% elif ansible_distribution == 'Debian' and ansible_distribution_major_version is version('12', '>=') %}
+        {% set use_break = true %}
+      {% elif ansible_os_family == 'RedHat' and ansible_distribution_major_version is version('10', '>=') %}
+        {% set use_break = true %}
+      {% endif %}
+      {{ '--break-system-packages' if use_break else '' }}
+
+- name: Patch Adagios settings.py for Python 3 compatibility
+  ansible.builtin.replace:
+    path: /opt/adagios/adagios/settings.py
+    regexp: '\[ord\(x\) for x in os\.urandom\(length\)\]'
+    replace: 'os.urandom(length)'
+  when: ansible_python.version.major >= 3
+  
 - name: Install Adagios from source
   pip:
     name: /opt/adagios
