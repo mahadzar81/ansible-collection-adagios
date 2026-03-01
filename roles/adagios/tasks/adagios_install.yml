@@ -1,4 +1,10 @@
 ---
+- name: Ensure Git ignores file mode changes globally (or locally if repo exists)
+  git_config:
+    name: core.filemode
+    scope: global
+    value: "false"
+
 - name: Clone Adagios Repo
   git:
     repo: "{{ adagios_repo }}"
@@ -105,7 +111,7 @@
     regexp: '\[ord\(x\) for x in os\.urandom\(length\)\]'
     replace: 'os.urandom(length)'
   when: ansible_python.version.major >= 3
-  
+
 - name: Install Adagios from source
   pip:
     name: /opt/adagios
