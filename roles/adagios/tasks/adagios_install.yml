@@ -1,16 +1,15 @@
 ---
-- name: Ensure Git ignores file mode changes globally (or locally if repo exists)
-  git_config:
-    name: core.filemode
-    scope: global
-    value: "false"
-
-- name: Clone Adagios Repo
+- name: Clone Adagios Repo to a source directory
   git:
     repo: "{{ adagios_repo }}"
-    dest: /opt/adagios
+    dest: /usr/local/src/adagios-source
     version: master 
     update: yes
+
+- name: Copy Adagios files to operational directory
+  command: cp -a /usr/local/src/adagios-source/. /opt/adagios/
+  args:
+    creates: /opt/adagios/adagios/etc/adagios/adagios.conf
 
 - name: Create Adagios config directory
   file:
@@ -108,9 +107,10 @@
 - name: Patch Adagios settings.py for Python 3 compatibility
   ansible.builtin.replace:
     path: /opt/adagios/adagios/settings.py
-    regexp: '\[ord\(x\) for x in os\.urandom\(length\)\]'
+    regexp: '\[ord\(x\)\s+for\s+x\s+in\s+os\.urandom\(length\)\]'
     replace: 'os.urandom(length)'
-  when: ansible_python.version.major >= 3
+    backup: true
+  when: (ansible_python.version.major | default(2) | int) >= 3
 
 - name: Install Adagios from source
   pip:
