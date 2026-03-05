@@ -66,7 +66,6 @@
              (ansible_os_family == 'RedHat' and ansible_distribution_major_version is version('10', '>=')) -%}
       --break-system-packages
       {%- else -%}
-      ''
       {%- endif -%}
 
 - name: Install Python build tools and requirements
@@ -77,13 +76,13 @@
       - future
     executable: pip3
     state: present
-    extra_args: "{{ pip_break_args }}"
+    extra_args: "{{ pip_break_args if pip_break_args else omit }}"
 
 - name: Install Adagios requirements from file
   pip:
     requirements: /opt/adagios/requirements.txt
     executable: pip3
-    extra_args: "{{ pip_break_args }}"
+    extra_args: "{{ pip_break_args if pip_break_args else omit }}"
 
 - name: Patch Adagios settings.py for Python 3 compatibility
   ansible.builtin.replace:
@@ -98,7 +97,7 @@
     name: /opt/adagios
     executable: pip3
     state: present
-    extra_args: "--no-build-isolation {{ pip_break_args }}"
+    extra_args: "--no-build-isolation{% if pip_break_args %} {{ pip_break_args }}{% endif %}"
 
 - name: Configure Adagios to use the correct nagios.cfg path
   lineinfile:
