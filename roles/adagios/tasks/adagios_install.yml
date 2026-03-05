@@ -92,12 +92,19 @@
     backup: true
   when: (ansible_python.version.major | default(2) | int) >= 3
 
+- name: Check if Adagios is already installed
+  ansible.builtin.command: pip3 show adagios
+  register: adagios_check
+  changed_when: false
+  failed_when: false
+
 - name: Install Adagios from source
-  pip:
+  ansible.builtin.pip:
     name: /opt/adagios
     executable: pip3
     state: present
     extra_args: "--no-build-isolation{% if pip_break_args %} {{ pip_break_args }}{% endif %}"
+  when: adagios_check.rc != 0
 
 - name: Configure Adagios to use the correct nagios.cfg path
   lineinfile:
