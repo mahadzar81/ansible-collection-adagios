@@ -2,9 +2,12 @@ name: Molecule CI
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "fix-*", "dev-*"]
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "fix-*", "dev-*"]
+  schedule:
+    # Nightly run at 02:00 UTC
+    - cron: "0 2 * * *"
   workflow_dispatch: # Allows manual triggering
 
 jobs:
