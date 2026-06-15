@@ -38,7 +38,6 @@
       - rrdtool
       - rrdtool-devel
       - perl-Time-HiRes
-      - perl-Sys-Hostname-Long
       - perl-Crypt-DES
       - perl-Digest-HMAC
       - perl-Digest-SHA1
