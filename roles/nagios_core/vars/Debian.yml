@@ -1,23 +1,6 @@
-system_packages:
-  - autoconf
-  - gcc
-  - libc6
-  - libmcrypt-dev
-  - make
-  - libssl-dev
-  - wget
-  - bc
-  - gawk
-  - dc
-  - build-essential
-  - snmp
-  - libnet-snmp-perl
-  - gettext
-  - apache2
-  - php
-  - libapache2-mod-php
-  - libgd-dev
-  - unzip
-  - python3-passlib
-apache_service: apache2
-apache_conf_dir: /etc/apache2/sites-enabled
+---
+# Loaded automatically by include_vars on Debian family systems
+_nagios_apache_service: apache2
+_nagios_apache_conf_dir: /etc/apache2/conf-available
+_nagios_apache_user: www-data
+_nagios_shell: /usr/sbin/nologin

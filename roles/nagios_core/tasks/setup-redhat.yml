@@ -1,0 +1,49 @@
+---
+- name: Set nagios_apache_user for RedHat family
+  ansible.builtin.set_fact:
+    nagios_apache_user: apache
+    nagios_apache_conf_dir: /etc/httpd/conf.d
+    nagios_packages: "{{ _nagios_redhat_packages }}"
+
+- name: Enable EPEL on RHEL/Rocky (when available)
+  ansible.builtin.package:
+    name: epel-release
+    state: present
+  when: ansible_distribution in ['CentOS', 'Rocky', 'AlmaLinux', 'OracleLinux']
+  ignore_errors: true  # RHEL proper may not have epel-release package
+
+- name: Install Nagios build dependencies (RedHat)
+  ansible.builtin.package:
+    name: "{{ nagios_packages }}"
+    state: present
+
+- name: Ensure nagios group exists
+  ansible.builtin.group:
+    name: "{{ nagios_group }}"
+    state: present
+    system: true
+
+- name: Ensure nagcmd group exists
+  ansible.builtin.group:
+    name: "{{ nagios_cmdgroup }}"
+    state: present
+    system: true
+
+- name: Ensure nagios user exists
+  ansible.builtin.user:
+    name: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    groups: "{{ nagios_cmdgroup }}"
+    comment: "Nagios Monitoring User"
+    home: "{{ nagios_home }}"
+    shell: /sbin/nologin
+    system: true
+    state: present
+    create_home: false
+
+- name: Add apache user to nagcmd group
+  ansible.builtin.user:
+    name: "{{ nagios_apache_user }}"
+    groups: "{{ nagios_cmdgroup }}"
+    append: true
+    state: present

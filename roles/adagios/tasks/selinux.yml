@@ -1,0 +1,136 @@
+---
+# ---------------------------------------------------------------------------
+# SELinux support for Adagios on RHEL/Rocky/AlmaLinux
+#
+# Adagios installs to /opt/adagios with a virtualenv at /opt/adagios-venv.
+# We need httpd_t to be able to run the WSGI app and access those paths.
+# ---------------------------------------------------------------------------
+
+- name: Ensure SELinux policy directory for Adagios exists
+  ansible.builtin.file:
+    path: "{{ adagios_selinux_policy_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# ---------------------------------------------------------------------------
+# File context labels for /opt/adagios and /opt/adagios-venv
+# ---------------------------------------------------------------------------
+- name: Set SELinux file context for Adagios install dir
+  community.general.sefcontext:
+    target: "{{ adagios_install_dir }}(/.*)?"
+    setype: httpd_sys_content_t
+    state: present
+  register: _adagios_fc_install
+
+- name: Set SELinux file context for Adagios virtualenv
+  community.general.sefcontext:
+    target: "{{ adagios_venv }}(/.*)?"
+    setype: httpd_sys_content_t
+    state: present
+  register: _adagios_fc_venv
+
+- name: Set SELinux file context for Adagios virtualenv executables
+  community.general.sefcontext:
+    target: "{{ adagios_venv }}/bin(/.*)?"
+    setype: httpd_exec_t
+    state: present
+  register: _adagios_fc_venv_bin
+
+- name: Set SELinux file context for Adagios log dir
+  community.general.sefcontext:
+    target: "/var/log/adagios(/.*)?"
+    setype: httpd_log_t
+    state: present
+  register: _adagios_fc_log
+
+- name: Set SELinux file context for Adagios run dir
+  community.general.sefcontext:
+    target: "/var/run/adagios(/.*)?"
+    setype: httpd_var_run_t
+    state: present
+  register: _adagios_fc_run
+
+- name: Apply SELinux file contexts (restorecon)
+  ansible.builtin.command:
+    cmd: "restorecon -Rv {{ item }}"
+  loop:
+    - "{{ adagios_install_dir }}"
+    - "{{ adagios_venv }}"
+    - /var/log/adagios
+    - /var/run/adagios
+  when: >
+    _adagios_fc_install.changed or
+    _adagios_fc_venv.changed or
+    _adagios_fc_venv_bin.changed or
+    _adagios_fc_log.changed or
+    _adagios_fc_run.changed
+  changed_when: true
+
+# ---------------------------------------------------------------------------
+# SELinux booleans for mod_wsgi / Django
+# ---------------------------------------------------------------------------
+- name: Allow httpd to connect to network (for Django DB connections)
+  ansible.posix.seboolean:
+    name: httpd_can_network_connect
+    state: true
+    persistent: true
+
+- name: Allow httpd to connect to DB
+  ansible.posix.seboolean:
+    name: httpd_can_network_connect_db
+    state: true
+    persistent: true
+
+- name: Allow httpd to read/write to nagios socket (Livestatus)
+  ansible.posix.seboolean:
+    name: httpd_run_nagios
+    state: true
+    persistent: true
+
+# ---------------------------------------------------------------------------
+# Custom TE policy for Adagios-specific AVC denials
+# ---------------------------------------------------------------------------
+- name: Deploy custom Adagios SELinux .te policy file
+  ansible.builtin.template:
+    src: adagios_custom.te.j2
+    dest: "{{ adagios_selinux_policy_dir }}/adagios_custom.te"
+    owner: root
+    group: root
+    mode: "0644"
+  register: _adagios_te_deployed
+
+- name: Compile Adagios SELinux policy module
+  ansible.builtin.command:
+    cmd: checkmodule -M -m -o adagios_custom.mod adagios_custom.te
+    chdir: "{{ adagios_selinux_policy_dir }}"
+  when: _adagios_te_deployed.changed
+  changed_when: true
+
+- name: Package Adagios SELinux policy module
+  ansible.builtin.command:
+    cmd: semodule_package -o adagios_custom.pp -m adagios_custom.mod
+    chdir: "{{ adagios_selinux_policy_dir }}"
+  when: _adagios_te_deployed.changed
+  changed_when: true
+
+- name: Install Adagios SELinux policy module
+  ansible.builtin.command:
+    cmd: semodule -i adagios_custom.pp
+    chdir: "{{ adagios_selinux_policy_dir }}"
+  when: _adagios_te_deployed.changed
+  changed_when: true
+  notify: Restart apache
+
+- name: Verify Adagios SELinux module is loaded
+  ansible.builtin.command:
+    cmd: semodule -l
+  register: _selinux_modules
+  changed_when: false
+
+- name: Display Adagios SELinux module status
+  ansible.builtin.debug:
+    msg: >
+      adagios_custom SELinux module is
+      {{ 'LOADED' if 'adagios_custom' in _selinux_modules.stdout else 'NOT FOUND' }}.

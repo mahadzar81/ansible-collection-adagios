@@ -1,0 +1,67 @@
+---
+# ---------------------------------------------------------------------------
+# Adagios — installed via git clone into a Python virtualenv
+# Idempotency: git module tracks the exact version/commit; pip checks packages
+# ---------------------------------------------------------------------------
+- name: Ensure Adagios install directory exists
+  ansible.builtin.file:
+    path: "{{ adagios_install_dir }}"
+    state: directory
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: "0755"
+
+- name: Clone or update Adagios repository
+  ansible.builtin.git:
+    repo: "{{ adagios_repo }}"
+    dest: "{{ adagios_install_dir }}"
+    version: "{{ adagios_version }}"
+    force: false
+    update: true
+  become_user: "{{ nagios_user }}"
+  register: _adagios_git
+
+- name: Create Python virtualenv for Adagios
+  ansible.builtin.command:
+    cmd: python3 -m venv {{ adagios_venv }}
+    creates: "{{ adagios_venv }}/bin/activate"
+
+- name: Upgrade pip in virtualenv
+  ansible.builtin.pip:
+    name: pip
+    state: latest
+    virtualenv: "{{ adagios_venv }}"
+
+- name: Install Adagios Python requirements into virtualenv
+  ansible.builtin.pip:
+    requirements: "{{ adagios_install_dir }}/requirements.txt"
+    virtualenv: "{{ adagios_venv }}"
+    state: present
+  when: _adagios_git.changed
+
+- name: Install Adagios package into virtualenv (editable)
+  ansible.builtin.pip:
+    name: "{{ adagios_install_dir }}"
+    extra_args: "-e"
+    virtualenv: "{{ adagios_venv }}"
+    state: present
+  when: _adagios_git.changed
+  notify: Restart adagios wsgi
+
+- name: Run Adagios database migrations
+  ansible.builtin.command:
+    cmd: "{{ adagios_venv }}/bin/python manage.py migrate --run-syncdb"
+    chdir: "{{ adagios_install_dir }}"
+  environment:
+    DJANGO_SETTINGS_MODULE: adagios.settings
+  when: _adagios_git.changed
+  changed_when: true
+
+- name: Collect Adagios static files
+  ansible.builtin.command:
+    cmd: "{{ adagios_venv }}/bin/python manage.py collectstatic --noinput"
+    chdir: "{{ adagios_install_dir }}"
+  environment:
+    DJANGO_SETTINGS_MODULE: adagios.settings
+  when: _adagios_git.changed
+  changed_when: true

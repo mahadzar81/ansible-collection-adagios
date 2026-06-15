@@ -1,18 +1,23 @@
+---
 namespace: mahadzar81
 name: adagios
-version: 1.0.10
+version: 1.2.0
 readme: README.md
+description: >
+  Ansible collection to deploy Nagios Core 4.x and Adagios web UI,
+  with full SELinux support for RHEL/Rocky Linux and idempotent task design.
 authors:
-- mahadzar.karsof@gmail.com
-description: Ansible collection for Adagios
+  - Mahadzar
 license:
-- MIT
-license_file: ''
-tags: []
+  - MIT
+tags:
+  - monitoring
+  - nagios
+  - adagios
+  - rhel
+  - selinux
 dependencies: {}
 repository: https://github.com/mahadzar81/ansible-collection-adagios
-documentation: http://adagios.org/
+documentation: https://github.com/mahadzar81/ansible-collection-adagios/blob/main/README.md
 homepage: https://github.com/mahadzar81/ansible-collection-adagios
-issues: http:/https://github.com/mahadzar81/ansible-collection-adagios/issues
-build_ignore: []
-
+issues: https://github.com/mahadzar81/ansible-collection-adagios/issues

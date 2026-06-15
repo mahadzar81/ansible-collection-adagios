@@ -1,0 +1,25 @@
+---
+- name: Update apt cache (Debian)
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install Adagios dependencies (Debian)
+  ansible.builtin.apt:
+    name:
+      - git
+      - python3
+      - python3-pip
+      - python3-dev
+      - python3-virtualenv
+      - gcc
+      - make
+      - wget
+      - libffi-dev
+      - libssl-dev
+      - rrdtool
+      - librrd-dev
+      - libperl-dev
+      - libnet-snmp-perl
+      - libtime-hires-perl
+    state: present

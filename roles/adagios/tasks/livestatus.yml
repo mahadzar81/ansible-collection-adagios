@@ -1,54 +1,88 @@
 ---
-# 1. Check if the compiled object already exists
-- name: Check if Livestatus is already installed
-  stat:
-    path: "/usr/local/lib/mk-livestatus/livestatus.o"
-  register: livestatus_binary
+# ---------------------------------------------------------------------------
+# MK Livestatus — compiled from source, idempotent via version stamp
+# ---------------------------------------------------------------------------
+- name: Check for existing Livestatus version stamp
+  ansible.builtin.slurp:
+    src: "{{ livestatus_broker_dir }}/.ansible_livestatus_version"
+  register: _ls_stamp
+  ignore_errors: true
 
-# 2. Group the download and compile tasks
-# These only run if the binary was NOT found in the previous step
-- name: Install MK Livestatus
-  block:
-    - name: Download MK Livestatus
-      get_url:
-        #url: "https://download.checkmk.com/checkmk/archive/{{ livestatus_version }}/mk-livestatus-{{ livestatus_version }}.tar.gz"
-        # Download from Alternative (GitHub Mirror) since checkmk URL require authentication
-        url: "https://github.com/EdCa361/mk_livestatus-for-Nagios-4.5.X/archive/refs/heads/main.zip"
-        dest: "/tmp/main.zip"
-        timeout: 30
-      register: download_result
-      until: download_result is succeeded
-      retries: 2
+- name: Set fact for installed Livestatus version
+  ansible.builtin.set_fact:
+    _ls_installed_version: "{{ (_ls_stamp.content | b64decode | trim) if not _ls_stamp.failed else '' }}"
 
-    - name: Extract Livestatus
-      unarchive:
-        src: "/tmp/main.zip"
-        dest: "/tmp"
-        remote_src: yes
-        # create: prevents re-extraction if the directory exists (optional, but good for speed)
-        creates: "/tmp/mk_livestatus-for-Nagios-4.5.X-main"
+- name: Ensure Livestatus broker directory exists
+  ansible.builtin.file:
+    path: "{{ livestatus_broker_dir }}"
+    state: directory
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: "0755"
 
-    - name: Compile and install MK Livestatus
-      shell: |
-        make distclean || make clean || true
-        ./configure --disable-dependency-tracking
-        make
-        make install
-      args:
-        chdir: /tmp/mk_livestatus-for-Nagios-4.5.X-main
-        creates: "/usr/local/lib/mk-livestatus/livestatus.o"
+- name: Download MK Livestatus source
+  ansible.builtin.get_url:
+    url: "{{ livestatus_src_base }}/mk-livestatus-{{ livestatus_version }}.tar.gz"
+    dest: /tmp/mk-livestatus-{{ livestatus_version }}.tar.gz
+    mode: "0644"
+    timeout: 120
+  when: _ls_installed_version != livestatus_version
 
-    - name: Cleanup downloaded archive
-      file:
-        path: "/tmp/main.zip"
-        state: absent
-  # The 'when' condition applies to the whole block
-  when: not livestatus_binary.stat.exists
+- name: Extract MK Livestatus source
+  ansible.builtin.unarchive:
+    src: /tmp/mk-livestatus-{{ livestatus_version }}.tar.gz
+    dest: /tmp/
+    remote_src: true
+    creates: /tmp/mk-livestatus-{{ livestatus_version }}/configure
+  when: _ls_installed_version != livestatus_version
 
-# 3. Configure Nagios (Run this always to ensure config consistency)
-- name: Add Livestatus broker to Nagios config
-  lineinfile:
-    path: /usr/local/nagios/etc/nagios.cfg
-    line: "broker_module=/usr/local/lib/mk-livestatus/livestatus.o /usr/local/nagios/var/rw/live"
+- name: Configure MK Livestatus build
+  ansible.builtin.command:
+    cmd: ./configure
+    chdir: /tmp/mk-livestatus-{{ livestatus_version }}
+    creates: /tmp/mk-livestatus-{{ livestatus_version }}/Makefile
+  when: _ls_installed_version != livestatus_version
+
+- name: Compile MK Livestatus
+  ansible.builtin.command:
+    cmd: make
+    chdir: /tmp/mk-livestatus-{{ livestatus_version }}
+    creates: /tmp/mk-livestatus-{{ livestatus_version }}/src/livestatus.o
+  when: _ls_installed_version != livestatus_version
+
+- name: Copy Livestatus broker module
+  ansible.builtin.copy:
+    src: /tmp/mk-livestatus-{{ livestatus_version }}/src/livestatus.o
+    dest: "{{ livestatus_broker_dir }}/livestatus.o"
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: "0755"
+    remote_src: true
+  when: _ls_installed_version != livestatus_version
+  notify: Restart nagios
+
+- name: Write Livestatus version stamp
+  ansible.builtin.copy:
+    content: "{{ livestatus_version }}"
+    dest: "{{ livestatus_broker_dir }}/.ansible_livestatus_version"
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: "0644"
+  when: _ls_installed_version != livestatus_version
+
+- name: Ensure Livestatus broker line in nagios.cfg (idempotent)
+  ansible.builtin.lineinfile:
+    path: "{{ nagios_home }}/etc/nagios.cfg"
+    regexp: '^broker_module=.*livestatus'
+    line: "broker_module={{ livestatus_broker_dir }}/livestatus.o /var/run/nagios/live"
     state: present
-  notify: restart nagios
+    backup: true
+  notify: Restart nagios
+
+- name: Ensure Livestatus socket directory exists
+  ansible.builtin.file:
+    path: /var/run/nagios
+    state: directory
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: "0755"

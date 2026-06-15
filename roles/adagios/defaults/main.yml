@@ -1,0 +1,27 @@
+---
+# Adagios source
+adagios_repo: "https://github.com/opinkerfi/adagios.git"
+adagios_version: "master"
+adagios_install_dir: /opt/adagios
+
+# MK Livestatus
+livestatus_version: "1.2.8p25"
+livestatus_src_base: "https://mathias-kettner.de/support"
+livestatus_broker_dir: /usr/local/lib/nagios/brokers
+
+# PNP4Nagios (graphing)
+pnp4nagios_version: "0.6.26"
+pnp4nagios_src_base: "https://sourceforge.net/projects/pnp4nagios/files/PNP-0.6"
+pnp4nagios_install_dir: /usr/local/pnp4nagios
+
+# Python virtualenv for adagios
+adagios_venv: /opt/adagios-venv
+
+# Nagios paths (must match nagios_core role defaults)
+nagios_home: /usr/local/nagios
+nagios_user: nagios
+nagios_group: nagios
+
+# SELinux
+adagios_selinux_manage: true
+adagios_selinux_policy_dir: /opt/adagios/selinux

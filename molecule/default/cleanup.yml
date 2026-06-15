@@ -1,0 +1,18 @@
+---
+# molecule/default/cleanup.yml
+# Runs after destroy — removes any artifacts left on the controller.
+- name: Clean up
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Remove temporary build artifacts
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/nagios-{{ nagios_version | default('4.5.0') }}
+        - /tmp/nagios-plugins-{{ nagios_plugins_version | default('2.4.8') }}
+        - /tmp/mk-livestatus-{{ livestatus_version | default('1.2.8p25') }}
+        - /tmp/pnp4nagios-{{ pnp4nagios_version | default('0.6.26') }}
+      ignore_errors: true

@@ -1,0 +1,43 @@
+---
+# examples/group_vars/monitoring.yml
+#
+# Group variables for all hosts in the [monitoring] group.
+# Override any role default here.
+# Sensitive values (passwords, API keys) should be stored in Vault — see
+# examples/group_vars/monitoring_vault.yml for the vault counterpart.
+
+# ---------------------------------------------------------------------------
+# nagios_core role variables
+# ---------------------------------------------------------------------------
+nagios_version: "4.5.0"
+nagios_plugins_version: "2.4.8"
+
+nagios_user: nagios
+nagios_group: nagios
+nagios_cmdgroup: nagcmd
+nagios_home: /usr/local/nagios
+
+# Password for the nagiosadmin web user — MUST come from Vault (see below).
+nagiosadmin_pass: "{{ vault_nagiosadmin_pass }}"
+
+# Firewall management (set false if you manage firewall separately)
+nagios_firewall_manage: true
+nagios_firewall_zone: public
+
+# SELinux — set true on RHEL/Rocky, false on Ubuntu/Debian
+nagios_selinux_manage: true
+
+# ---------------------------------------------------------------------------
+# adagios role variables
+# ---------------------------------------------------------------------------
+adagios_repo: "https://github.com/opinkerfi/adagios.git"
+adagios_version: "master"
+adagios_install_dir: /opt/adagios
+adagios_venv: /opt/adagios-venv
+
+livestatus_version: "1.2.8p25"
+livestatus_broker_dir: /usr/local/lib/nagios/brokers
+
+pnp4nagios_version: "0.6.26"
+
+adagios_selinux_manage: true

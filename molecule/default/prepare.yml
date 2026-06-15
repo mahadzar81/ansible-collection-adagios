@@ -1,10 +1,30 @@
 ---
-- name: Prepare
+# molecule/default/prepare.yml
+# Runs before converge — installs minimum packages needed inside the
+# Docker container to mimic a real RHEL/Rocky/Ubuntu install.
+- name: Prepare containers
   hosts: all
-  gather_facts: false
+  become: true
+  gather_facts: true
+
   tasks:
-    - name: Ensure sudoers.d is permissive for CI
-      raw: |
-        mkdir -p /etc/sudoers.d
-        echo "ALL ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/molecule
-        chmod 0440 /etc/sudoers.d/molecule
+    - name: Install Python3 and sudo (RedHat)
+      ansible.builtin.raw: dnf install -y python3 sudo
+      when: ansible_os_family == "RedHat"
+      changed_when: true
+
+    - name: Install Python3 and sudo (Debian)
+      ansible.builtin.raw: apt-get update && apt-get install -y python3 sudo
+      when: ansible_os_family == "Debian"
+      changed_when: true
+
+    - name: Install systemd (Rocky/RHEL containers)
+      ansible.builtin.package:
+        name: systemd
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Disable SELinux in molecule containers (not supported in Docker)
+      ansible.builtin.set_fact:
+        nagios_selinux_manage: false
+        adagios_selinux_manage: false

@@ -1,0 +1,197 @@
+---
+# ---------------------------------------------------------------------------
+# SELinux support for Nagios Core on RHEL/Rocky/AlmaLinux
+#
+# Nagios installs to /usr/local/nagios which is outside the standard
+# filesystem hierarchy. We need to:
+#   1. Label binaries, libs, logs, etc. with the correct SELinux types.
+#   2. Allow Apache (httpd_t) to access Nagios web dirs and the command pipe.
+#   3. Allow the nagios daemon itself to function properly.
+#   4. Use file context equivalences where possible (idempotent).
+#   5. Compile a small Type Enforcement policy for any remaining AVC denials.
+# ---------------------------------------------------------------------------
+
+- name: Check current SELinux mode
+  ansible.builtin.command: getenforce
+  register: _selinux_mode
+  changed_when: false
+
+- name: Display current SELinux mode
+  ansible.builtin.debug:
+    msg: "SELinux is currently: {{ _selinux_mode.stdout }}"
+
+# ---------------------------------------------------------------------------
+# Install SELinux tooling (already pulled in by packages, but ensure)
+# ---------------------------------------------------------------------------
+- name: Ensure SELinux management tools are installed
+  ansible.builtin.package:
+    name:
+      - policycoreutils
+      - policycoreutils-python-utils
+      - checkpolicy
+      - setools-console
+    state: present
+
+# ---------------------------------------------------------------------------
+# File context equivalences — map /usr/local/nagios/* to known types
+# These are idempotent: semanage reports "already defined" if re-run.
+# ---------------------------------------------------------------------------
+- name: Set SELinux file context equivalence for nagios_home
+  community.general.sefcontext:
+    target: "{{ nagios_home }}(/.*)?"
+    setype: nagios_var_run_t
+    state: present
+  register: _selinux_fc_home
+
+- name: Set SELinux file context for nagios binaries
+  community.general.sefcontext:
+    target: "{{ nagios_home }}/bin(/.*)?"
+    setype: nagios_exec_t
+    state: present
+  register: _selinux_fc_bin
+
+- name: Set SELinux file context for nagios sbin
+  community.general.sefcontext:
+    target: "{{ nagios_home }}/sbin(/.*)?"
+    setype: nagios_exec_t
+    state: present
+  register: _selinux_fc_sbin
+
+- name: Set SELinux file context for nagios log directory
+  community.general.sefcontext:
+    target: "{{ nagios_home }}/var/log(/.*)?"
+    setype: nagios_log_t
+    state: present
+  register: _selinux_fc_log
+
+- name: Set SELinux file context for nagios var (runtime)
+  community.general.sefcontext:
+    target: "{{ nagios_home }}/var(/.*)?"
+    setype: nagios_var_run_t
+    state: present
+  register: _selinux_fc_var
+
+- name: Set SELinux file context for nagios etc (config)
+  community.general.sefcontext:
+    target: "{{ nagios_home }}/etc(/.*)?"
+    setype: nagios_etc_t
+    state: present
+  register: _selinux_fc_etc
+
+- name: Set SELinux file context for nagios command pipe
+  community.general.sefcontext:
+    target: "{{ nagios_home }}/var/rw/nagios.cmd"
+    setype: nagios_rw_t
+    state: present
+  register: _selinux_fc_cmd
+
+- name: Set SELinux file context for nagios libexec (plugins)
+  community.general.sefcontext:
+    target: "{{ nagios_home }}/libexec(/.*)?"
+    setype: nagios_unconfined_plugin_exec_t
+    state: present
+  register: _selinux_fc_plugins
+
+- name: Set SELinux file context for nagios share (web content)
+  community.general.sefcontext:
+    target: "{{ nagios_home }}/share(/.*)?"
+    setype: httpd_sys_content_t
+    state: present
+  register: _selinux_fc_share
+
+# ---------------------------------------------------------------------------
+# Apply file contexts (restorecon) — only when contexts were added/changed
+# ---------------------------------------------------------------------------
+- name: Restore SELinux file contexts on nagios_home
+  ansible.builtin.command:
+    cmd: restorecon -Rv {{ nagios_home }}
+  when: >
+    _selinux_fc_home.changed or
+    _selinux_fc_bin.changed or
+    _selinux_fc_sbin.changed or
+    _selinux_fc_log.changed or
+    _selinux_fc_var.changed or
+    _selinux_fc_etc.changed or
+    _selinux_fc_cmd.changed or
+    _selinux_fc_plugins.changed or
+    _selinux_fc_share.changed
+  changed_when: true
+
+# ---------------------------------------------------------------------------
+# SELinux booleans needed for Apache → Nagios CGI integration
+# ---------------------------------------------------------------------------
+- name: Set SELinux boolean - httpd can execute nagios scripts
+  ansible.posix.seboolean:
+    name: httpd_run_nagios
+    state: true
+    persistent: true
+
+- name: Set SELinux boolean - httpd can send mail (for nagios notifications via CGI)
+  ansible.posix.seboolean:
+    name: httpd_can_sendmail
+    state: true
+    persistent: true
+
+- name: Set SELinux boolean - httpd can read user content
+  ansible.posix.seboolean:
+    name: httpd_read_user_content
+    state: true
+    persistent: true
+
+# ---------------------------------------------------------------------------
+# Custom SELinux Type Enforcement policy for remaining AVC denials
+# This handles: Apache writing to nagios command pipe, nagios spawning plugins
+# ---------------------------------------------------------------------------
+- name: Ensure SELinux policy build directory exists
+  ansible.builtin.file:
+    path: "{{ nagios_selinux_policy_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy custom Nagios SELinux .te policy file
+  ansible.builtin.template:
+    src: nagios_custom.te.j2
+    dest: "{{ nagios_selinux_policy_dir }}/nagios_custom.te"
+    owner: root
+    group: root
+    mode: "0644"
+  register: _selinux_te_deployed
+
+- name: Compile SELinux policy module (.te → .mod)
+  ansible.builtin.command:
+    cmd: checkmodule -M -m -o nagios_custom.mod nagios_custom.te
+    chdir: "{{ nagios_selinux_policy_dir }}"
+  when: _selinux_te_deployed.changed
+  changed_when: true
+
+- name: Package SELinux policy module (.mod → .pp)
+  ansible.builtin.command:
+    cmd: semodule_package -o nagios_custom.pp -m nagios_custom.mod
+    chdir: "{{ nagios_selinux_policy_dir }}"
+  when: _selinux_te_deployed.changed
+  changed_when: true
+
+- name: Install custom SELinux policy module
+  ansible.builtin.command:
+    cmd: semodule -i nagios_custom.pp
+    chdir: "{{ nagios_selinux_policy_dir }}"
+  when: _selinux_te_deployed.changed
+  changed_when: true
+  notify: Restart nagios
+
+# ---------------------------------------------------------------------------
+# Verify the policy module is loaded (idempotency check)
+# ---------------------------------------------------------------------------
+- name: Check if custom SELinux module is loaded
+  ansible.builtin.command:
+    cmd: semodule -l
+  register: _selinux_modules_list
+  changed_when: false
+
+- name: Display SELinux module load status
+  ansible.builtin.debug:
+    msg: >
+      Custom nagios_custom SELinux module is
+      {{ 'LOADED' if 'nagios_custom' in _selinux_modules_list.stdout else 'NOT FOUND - policy may need recompile' }}.

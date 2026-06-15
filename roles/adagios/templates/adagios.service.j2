@@ -1,0 +1,12 @@
+[Unit]
+Description=Adagios Web Interface (via Apache mod_wsgi)
+After=network.target nagios.service httpd.service
+Wants=nagios.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/true
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

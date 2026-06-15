@@ -1,0 +1,31 @@
+---
+# Nagios Core version to compile
+nagios_version: "4.5.0"
+nagios_plugins_version: "2.4.8"
+
+# System user/group
+nagios_user: nagios
+nagios_group: nagios
+nagios_cmdgroup: nagcmd
+
+# Installation prefix
+nagios_home: /usr/local/nagios
+
+# Nagios source download base URL
+nagios_src_base: "https://github.com/NagiosEnterprises/nagioscore/releases/download"
+nagios_plugins_src_base: "https://nagios-plugins.org/download"
+
+# Web UI credentials
+nagiosadmin_pass: "Welcome123"   # Override in vault!
+
+# Apache config
+nagios_apache_user: "apache"     # RHEL family
+nagios_apache_conf_dir: /etc/httpd/conf.d
+
+# Whether to open firewall port
+nagios_firewall_manage: true
+nagios_firewall_zone: public
+
+# SELinux settings (RHEL/Rocky)
+nagios_selinux_manage: true      # set to false to skip SELinux tasks entirely
+nagios_selinux_policy_dir: /usr/local/nagios/selinux

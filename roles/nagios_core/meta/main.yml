@@ -1,8 +1,8 @@
 ---
 galaxy_info:
-  role_name: adagios
+  role_name: nagios_core
   author: mahadzar81
-  description: "Install and configure Adagios web UI with Livestatus, PNP4Nagios, and SELinux support"
+  description: "Compile and install Nagios Core 4.x from source with SELinux support"
   license: MIT
   min_ansible_version: "2.9"
   platforms:
@@ -19,5 +19,4 @@ galaxy_info:
         - buster
         - bullseye
 
-dependencies:
-  - role: mahadzar81.adagios.nagios_core
+dependencies: []
