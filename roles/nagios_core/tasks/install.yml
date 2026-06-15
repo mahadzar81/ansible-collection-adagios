@@ -3,15 +3,20 @@
 # Idempotency anchor: skip compile if the exact same version is already
 # installed. We write a version stamp file after a successful install.
 # ---------------------------------------------------------------------------
-- name: Check for existing Nagios Core version stamp
+- name: Check if Nagios Core version stamp exists
+  ansible.builtin.stat:
+    path: "{{ nagios_home }}/.ansible_nagios_version"
+  register: _nagios_stamp_file
+
+- name: Read existing Nagios Core version stamp
   ansible.builtin.slurp:
     src: "{{ nagios_home }}/.ansible_nagios_version"
   register: _nagios_installed_stamp
-  ignore_errors: true
+  when: _nagios_stamp_file.stat.exists
 
 - name: Set fact for installed nagios version
   ansible.builtin.set_fact:
-    _nagios_installed_version: "{{ (_nagios_installed_stamp.content | b64decode | trim) if not _nagios_installed_stamp.failed else '' }}"
+    _nagios_installed_version: "{{ (_nagios_installed_stamp.content | b64decode | trim) if _nagios_stamp_file.stat.exists else '' }}"
 
 - name: Download Nagios Core source tarball
   ansible.builtin.get_url:
@@ -88,15 +93,20 @@
 # ---------------------------------------------------------------------------
 # Nagios Plugins
 # ---------------------------------------------------------------------------
-- name: Check for existing Nagios Plugins version stamp
+- name: Check if Nagios Plugins version stamp exists
+  ansible.builtin.stat:
+    path: "{{ nagios_home }}/.ansible_plugins_version"
+  register: _plugins_stamp_file
+
+- name: Read existing Nagios Plugins version stamp
   ansible.builtin.slurp:
     src: "{{ nagios_home }}/.ansible_plugins_version"
   register: _plugins_installed_stamp
-  ignore_errors: true
+  when: _plugins_stamp_file.stat.exists
 
 - name: Set fact for installed plugins version
   ansible.builtin.set_fact:
-    _plugins_installed_version: "{{ (_plugins_installed_stamp.content | b64decode | trim) if not _plugins_installed_stamp.failed else '' }}"
+    _plugins_installed_version: "{{ (_plugins_installed_stamp.content | b64decode | trim) if _plugins_stamp_file.stat.exists else '' }}"
 
 - name: Download Nagios Plugins source tarball
   ansible.builtin.get_url:
