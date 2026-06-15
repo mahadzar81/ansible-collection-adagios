@@ -44,6 +44,10 @@
       - perl-IO-Socket-INET6
       - net-snmp-perl
       - boost-devel
+      - rrdtool-perl
+      - libstdc++-static
+      - glibc-static
+      - python3-mod_wsgi
     state: present
 
 - name: Install pip packages needed for Adagios (RedHat)
