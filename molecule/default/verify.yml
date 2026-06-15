@@ -1,7 +1,7 @@
 ---
 - name: Verify Nagios Core and Adagios installation
   hosts: all
-  become: true
+  #become: true
   gather_facts: true
 
   tasks:
