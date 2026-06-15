@@ -1,30 +1,38 @@
 ---
 # molecule/default/prepare.yml
-# Runs before converge — installs minimum packages needed inside the
-# Docker container to mimic a real RHEL/Rocky/Ubuntu install.
+# Runs before converge.
+# geerlingguy images already ship Python3, sudo, and systemd — we just
+# need to make sure dnf/apt caches are primed and set SELinux facts.
 - name: Prepare containers
   hosts: all
   become: true
   gather_facts: true
 
   tasks:
-    - name: Install Python3 and sudo (RedHat)
-      ansible.builtin.raw: dnf install -y python3 sudo
+    - name: Update dnf cache (RedHat)
+      ansible.builtin.dnf:
+        update_cache: true
       when: ansible_os_family == "RedHat"
-      changed_when: true
 
-    - name: Install Python3 and sudo (Debian)
-      ansible.builtin.raw: apt-get update && apt-get install -y python3 sudo
+    - name: Update apt cache (Debian)
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
       when: ansible_os_family == "Debian"
-      changed_when: true
 
-    - name: Install systemd (Rocky/RHEL containers)
-      ansible.builtin.package:
-        name: systemd
+    - name: Install dnf-plugins-core for module management (RedHat)
+      ansible.builtin.dnf:
+        name: dnf-plugins-core
         state: present
       when: ansible_os_family == "RedHat"
 
-    - name: Disable SELinux in molecule containers (not supported in Docker)
+    - name: Ensure dbus is running (required by systemd services in containers)
+      ansible.builtin.service:
+        name: dbus
+        state: started
+      ignore_errors: true
+
+    - name: Override SELinux-related vars (not supported in Docker)
       ansible.builtin.set_fact:
         nagios_selinux_manage: false
         adagios_selinux_manage: false

@@ -55,33 +55,49 @@ jobs:
         with:
           python-version: "3.11"
 
+      # GitHub-hosted runners use cgroup v2. The geerlingguy images expect
+      # cgroup v1 mounts to be writable. This step reconfigures Docker to
+      # use cgroupfs as its cgroup driver so containers start cleanly.
+      - name: Configure Docker for cgroup v2 compatibility
+        run: |
+          sudo mkdir -p /etc/docker
+          echo '{"exec-opts": ["native.cgroupdriver=cgroupfs"]}' \
+            | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker
+          sudo systemctl is-active docker
+
       - name: Install Molecule and dependencies
         run: |
           pip install \
-            molecule \
-            molecule-docker \
+            "molecule>=6.0" \
+            "molecule-plugins[docker]" \
             ansible \
             ansible-lint \
-            docker
+            "docker>=6.0"
 
       - name: Install collection requirements
         run: ansible-galaxy collection install -r requirements.yml
 
-      - name: Run Molecule tests
+      - name: Run Molecule tests (create → prepare → converge → verify → destroy)
         run: molecule test --scenario-name ${{ matrix.scenario }}
         env:
           PY_COLORS: "1"
           ANSIBLE_FORCE_COLOR: "1"
 
-      - name: Run Molecule converge a second time (idempotency check)
+      - name: Idempotency check — converge a second time, expect 0 changed
         run: |
+          molecule create  --scenario-name ${{ matrix.scenario }}
+          molecule prepare --scenario-name ${{ matrix.scenario }}
+          molecule converge --scenario-name ${{ matrix.scenario }}
+          echo "--- second run ---"
           molecule converge --scenario-name ${{ matrix.scenario }} 2>&1 | tee /tmp/idempotency.log
-          # Fail if any task reports 'changed'
-          if grep -E '^(TASK|changed:)' /tmp/idempotency.log | grep -q 'changed:'; then
-            echo "ERROR: Idempotency check failed — tasks reported changed on second run."
-            cat /tmp/idempotency.log
+          molecule destroy --scenario-name ${{ matrix.scenario }}
+          if grep -qE '^changed:' /tmp/idempotency.log; then
+            echo "FAIL: tasks reported changed on second converge run:"
+            grep -E '^(TASK|changed:)' /tmp/idempotency.log
             exit 1
           fi
+          echo "PASS: no changed tasks on second run."
         env:
           PY_COLORS: "1"
           ANSIBLE_FORCE_COLOR: "1"
