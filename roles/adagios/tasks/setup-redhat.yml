@@ -43,6 +43,7 @@
       - perl-Digest-SHA1
       - perl-IO-Socket-INET6
       - net-snmp-perl
+      - boost-devel
     state: present
 
 - name: Install pip packages needed for Adagios (RedHat)
