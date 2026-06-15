@@ -1,7 +1,7 @@
 ---
 - name: Install Nagios Apache config (RedHat)
   ansible.builtin.command:
-    cmd: make install-webconf
+    cmd: "make install-webconf HTTPD_CONF={{ nagios_apache_conf_dir }}"
     chdir: /tmp/nagios-{{ nagios_version }}
     creates: "{{ nagios_apache_conf_dir }}/nagios.conf"
   when:
@@ -13,7 +13,7 @@
 
 - name: Install Nagios Apache config (Debian)
   ansible.builtin.command:
-    cmd: make install-webconf
+    cmd: "make install-webconf HTTPD_CONF=/etc/apache2/conf-available"
     chdir: /tmp/nagios-{{ nagios_version }}
     creates: /etc/apache2/conf-available/nagios.conf
   when:

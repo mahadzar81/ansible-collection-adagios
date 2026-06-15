@@ -50,10 +50,10 @@
 
 - name: Set Apache config directory based on OS
   set_fact:
-    apache_conf_dir: "{{ '/etc/apache2/sites-enabled' if ansible_os_family == 'Debian' else '/etc/httpd/conf.d' }}"
+    apache_conf_dir: "{{ '/etc/apache2/conf-available' if ansible_os_family == 'Debian' else '/etc/httpd/conf.d' }}"
 
 - name: Install Nagios Web Config
-  command: make install-webconf
+  command: "make install-webconf HTTPD_CONF={{ apache_conf_dir }}"
   args:
     chdir: "/tmp/nagios-{{ nagios_version }}"
     creates: "{{ apache_conf_dir }}/nagios.conf"
