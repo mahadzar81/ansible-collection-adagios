@@ -13,6 +13,7 @@
       - python3-dev
       - python3-virtualenv
       - gcc
+      - g++
       - make
       - wget
       - libffi-dev
@@ -22,4 +23,5 @@
       - libperl-dev
       - libnet-snmp-perl
       - libtime-hires-perl
+      - libboost-all-dev
     state: present
