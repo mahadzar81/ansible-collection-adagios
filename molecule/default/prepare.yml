@@ -33,6 +33,9 @@
       ignore_errors: true
 
     - name: Override SELinux-related vars (not supported in Docker)
+      # Sets them at the play level so converge picks them up.
+      # The molecule.yml group_vars also sets these, but being explicit here
+      # avoids confusion if someone edits group_vars.
       ansible.builtin.set_fact:
         nagios_selinux_manage: false
         adagios_selinux_manage: false

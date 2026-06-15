@@ -8,6 +8,8 @@ driver:
   name: docker
 
 platforms:
+  # geerlingguy images are purpose-built for Ansible/Molecule testing:
+  # they ship with systemd, Python3, and sudo pre-configured.
   - name: rocky9
     image: geerlingguy/docker-rockylinux9-ansible:latest
     privileged: true
@@ -56,7 +58,7 @@ provisioner:
   config_options:
     defaults:
       callbacks_enabled: profile_tasks
-      stdout_callback: yaml
+      stdout_callback: ansible.builtin.yaml
 
 verifier:
   name: ansible

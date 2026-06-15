@@ -1,18 +1,49 @@
 ---
 # molecule/default/cleanup.yml
-# Runs after destroy — removes any artifacts left on the controller.
-- name: Clean up
+# Runs on localhost after destroy — removes temporary build artifacts
+# left in /tmp from the compile steps. Uses hardcoded paths to avoid
+# depending on role variables that are not defined in the localhost context.
+- name: Clean up build artifacts
   hosts: localhost
   gather_facts: false
 
   tasks:
-    - name: Remove temporary build artifacts
+    - name: Remove Nagios Core build directory
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: /tmp/nagios-4.5.0
         state: absent
-      loop:
-        - /tmp/nagios-{{ nagios_version | default('4.5.0') }}
-        - /tmp/nagios-plugins-{{ nagios_plugins_version | default('2.4.8') }}
-        - /tmp/mk-livestatus-{{ livestatus_version | default('1.2.8p25') }}
-        - /tmp/pnp4nagios-{{ pnp4nagios_version | default('0.6.26') }}
-      ignore_errors: true
+
+    - name: Remove Nagios Core source tarball
+      ansible.builtin.file:
+        path: /tmp/nagios-4.5.0.tar.gz
+        state: absent
+
+    - name: Remove Nagios Plugins build directory
+      ansible.builtin.file:
+        path: /tmp/nagios-plugins-2.4.8
+        state: absent
+
+    - name: Remove Nagios Plugins source tarball
+      ansible.builtin.file:
+        path: /tmp/nagios-plugins-2.4.8.tar.gz
+        state: absent
+
+    - name: Remove MK Livestatus build directory
+      ansible.builtin.file:
+        path: /tmp/mk-livestatus-1.2.8p25
+        state: absent
+
+    - name: Remove MK Livestatus source tarball
+      ansible.builtin.file:
+        path: /tmp/mk-livestatus-1.2.8p25.tar.gz
+        state: absent
+
+    - name: Remove PNP4Nagios build directory
+      ansible.builtin.file:
+        path: /tmp/pnp4nagios-0.6.26
+        state: absent
+
+    - name: Remove PNP4Nagios source tarball
+      ansible.builtin.file:
+        path: /tmp/pnp4nagios-0.6.26.tar.gz
+        state: absent
