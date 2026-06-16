@@ -49,7 +49,7 @@
     regexp: '^cfg_dir=/etc/nagios/adagios'
     line: 'cfg_dir=/etc/nagios/adagios'
     state: present
-  notify: restart nagios
+  notify: Restart nagios
 
 - name: Copy sample config if not present
   copy:
