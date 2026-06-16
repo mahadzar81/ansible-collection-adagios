@@ -6,7 +6,7 @@
 - name: Deploy Adagios Apache virtual host config
   ansible.builtin.template:
     src: adagios_apache.conf.j2
-    dest: "{{ nagios_apache_conf_dir | default('/etc/httpd/conf.d') }}/adagios.conf"
+    dest: "{{ _adagios_apache_conf_dir | default('/etc/httpd/conf.d') }}/adagios.conf"
     owner: root
     group: root
     mode: "0644"
