@@ -112,7 +112,7 @@
     regexp: '^\s*nagios_config\s*='
     line: 'nagios_config = "/usr/local/nagios/etc/nagios.cfg"'
     state: present
-  notify: restart apache
+  notify: Restart apache
 
 - name: Configure Adagios destination directory
   lineinfile:
@@ -120,13 +120,13 @@
     regexp: '^\s*destination_directory\s*='
     line: 'destination_directory = "/etc/nagios/adagios/"'
     state: present
-  notify: restart apache
+  notify: Restart apache
 
 - name: Configure Adagios Apache Config
   template:
     src: adagios.conf.j2
     dest: "{{ apache_conf_dir }}/adagios.conf"
-  notify: restart apache
+  notify: Restart apache
 
 - name: Ensure Nagios group has write access to config (Idempotent version)
   ansible.builtin.file:
