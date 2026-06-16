@@ -125,7 +125,7 @@
 - name: Configure Adagios Apache Config
   template:
     src: adagios.conf.j2
-    dest: "{{ apache_conf_dir }}/adagios.conf"
+    dest: "{{ _adagios_apache_conf_dir }}/adagios.conf"
   notify: Restart apache
 
 - name: Ensure Nagios group has write access to config (Idempotent version)
