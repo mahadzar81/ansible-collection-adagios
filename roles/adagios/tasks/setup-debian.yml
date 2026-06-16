@@ -24,4 +24,5 @@
       - libnet-snmp-perl
       - libtime-hires-perl
       - libboost-all-dev
+      - libapache2-mod-wsgi-py3
     state: present
