@@ -44,6 +44,7 @@ provisioner:
         nagiosadmin_pass: "Molecule_T3st_Pass!"
         nagios_selinux_manage: false   # Docker containers lack full SELinux
         adagios_selinux_manage: false
+        adagios_force_update: false    # skip git ls-remote in CI containers
   options:
     vvv: false
   config_options:

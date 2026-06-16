@@ -4,6 +4,10 @@ adagios_repo: "https://github.com/opinkerfi/adagios.git"
 adagios_version: "master"
 adagios_install_dir: /opt/adagios
 
+# Set true to force git pull even when the source directory already exists.
+# Safe to leave false for normal idempotent runs.
+adagios_force_update: false
+
 # MK Livestatus
 livestatus_version: "1.2.8p25"
 livestatus_src_base: "https://mathias-kettner.de/support"
