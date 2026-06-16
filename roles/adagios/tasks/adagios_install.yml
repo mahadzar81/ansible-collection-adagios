@@ -5,6 +5,7 @@
     dest: /usr/local/src/adagios-source
     version: master 
     update: yes
+    force: yes
 
 - name: Ensure /opt/adagios directory exists
   file:
