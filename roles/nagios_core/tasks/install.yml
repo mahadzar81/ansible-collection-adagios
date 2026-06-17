@@ -156,6 +156,13 @@
 # ---------------------------------------------------------------------------
 # nagiosadmin htpasswd (idempotent via htpasswd module)
 # ---------------------------------------------------------------------------
+- name: Check if nagiosadmin user already exists
+  ansible.builtin.command: "grep -q '^nagiosadmin:' {{ nagios_home }}/etc/htpasswd.users"
+  register: user_exists
+  failed_when: false
+  changed_when: false
+  check_mode: no
+
 - name: Ensure htpasswd file has nagiosadmin entry
   community.general.htpasswd:
     path: "{{ nagios_home }}/etc/htpasswd.users"
@@ -165,6 +172,8 @@
     group: "{{ nagios_apache_user }}"
     mode: "0640"
     crypt_scheme: md5_crypt
+  when: user_exists.rc != 0
+  changed_when: false
 
 # ---------------------------------------------------------------------------
 # Service
