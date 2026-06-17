@@ -1,10 +1,41 @@
 ---
-- name: Prepare
+# molecule/default/prepare.yml
+# Runs before converge.
+# geerlingguy images already ship Python3, sudo, and systemd — we just
+# need to make sure dnf/apt caches are primed and set SELinux facts.
+- name: Prepare containers
   hosts: all
-  gather_facts: false
+  #become: true
+  gather_facts: true
+
   tasks:
-    - name: Ensure sudoers.d is permissive for CI
-      raw: |
-        mkdir -p /etc/sudoers.d
-        echo "ALL ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/molecule
-        chmod 0440 /etc/sudoers.d/molecule
+    - name: Update dnf cache (RedHat)
+      ansible.builtin.dnf:
+        update_cache: true
+      when: ansible_os_family == "RedHat"
+
+    - name: Update apt cache (Debian)
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 0
+      when: ansible_os_family == "Debian"
+
+    - name: Install dnf-plugins-core for module management (RedHat)
+      ansible.builtin.dnf:
+        name: dnf-plugins-core
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Ensure dbus is running (required by systemd services in containers)
+      ansible.builtin.service:
+        name: dbus
+        state: started
+      ignore_errors: true
+
+    - name: Override SELinux-related vars (not supported in Docker)
+      # Sets them at the play level so converge picks them up.
+      # The molecule.yml group_vars also sets these, but being explicit here
+      # avoids confusion if someone edits group_vars.
+      ansible.builtin.set_fact:
+        nagios_selinux_manage: false
+        adagios_selinux_manage: false

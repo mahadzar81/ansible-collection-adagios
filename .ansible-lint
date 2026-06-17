@@ -1,0 +1,14 @@
+---
+profile: production
+
+exclude_paths:
+  - .cache/
+  - molecule/
+  - dist/
+
+warn_list:
+  - experimental
+  - role-name
+
+skip_list:
+  - yaml[line-length]    # handled by yamllint with a higher limit

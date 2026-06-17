@@ -1,0 +1,185 @@
+---
+# ---------------------------------------------------------------------------
+# Idempotency anchor: skip compile if the exact same version is already
+# installed. We write a version stamp file after a successful install.
+# ---------------------------------------------------------------------------
+- name: Check if Nagios Core version stamp exists
+  ansible.builtin.stat:
+    path: "{{ nagios_home }}/.ansible_nagios_version"
+  register: _nagios_stamp_file
+
+- name: Read existing Nagios Core version stamp
+  ansible.builtin.slurp:
+    src: "{{ nagios_home }}/.ansible_nagios_version"
+  register: _nagios_installed_stamp
+  when: _nagios_stamp_file.stat.exists
+
+- name: Set fact for installed nagios version
+  ansible.builtin.set_fact:
+    _nagios_installed_version: "{{ (_nagios_installed_stamp.content | b64decode | trim) if _nagios_stamp_file.stat.exists else '' }}"
+
+- name: Download Nagios Core source tarball
+  ansible.builtin.get_url:
+    url: "{{ nagios_src_base }}/nagios-{{ nagios_version }}/nagios-{{ nagios_version }}.tar.gz"
+    dest: /tmp/nagios-{{ nagios_version }}.tar.gz
+    mode: "0644"
+    timeout: 120
+  when: _nagios_installed_version != nagios_version
+
+- name: Extract Nagios Core source
+  ansible.builtin.unarchive:
+    src: /tmp/nagios-{{ nagios_version }}.tar.gz
+    dest: /tmp/
+    remote_src: true
+    creates: /tmp/nagios-{{ nagios_version }}/configure
+  when: _nagios_installed_version != nagios_version
+
+- name: Configure Nagios Core build
+  ansible.builtin.command:
+    cmd: >
+      ./configure
+      --with-command-group={{ nagios_cmdgroup }}
+      --with-nagios-user={{ nagios_user }}
+      --with-nagios-group={{ nagios_group }}
+    chdir: /tmp/nagios-{{ nagios_version }}
+    creates: /tmp/nagios-{{ nagios_version }}/Makefile
+  when: _nagios_installed_version != nagios_version
+
+- name: Compile Nagios Core
+  ansible.builtin.command:
+    cmd: make all
+    chdir: /tmp/nagios-{{ nagios_version }}
+    creates: /tmp/nagios-{{ nagios_version }}/base/nagios
+  when: _nagios_installed_version != nagios_version
+
+- name: Install Nagios Core
+  ansible.builtin.command:
+    cmd: make install
+    chdir: /tmp/nagios-{{ nagios_version }}
+    creates: "{{ nagios_home }}/bin/nagios"
+  when: _nagios_installed_version != nagios_version
+  notify: Restart nagios
+
+- name: Install Nagios init scripts
+  ansible.builtin.command:
+    cmd: make install-daemoninit
+    chdir: /tmp/nagios-{{ nagios_version }}
+    creates: /etc/systemd/system/nagios.service
+  when: _nagios_installed_version != nagios_version
+
+- name: Install Nagios command mode
+  ansible.builtin.command:
+    cmd: make install-commandmode
+    chdir: /tmp/nagios-{{ nagios_version }}
+  when: _nagios_installed_version != nagios_version
+  changed_when: true
+
+- name: Install sample Nagios config files
+  ansible.builtin.command:
+    cmd: make install-config
+    chdir: /tmp/nagios-{{ nagios_version }}
+    creates: "{{ nagios_home }}/etc/nagios.cfg"
+  when: _nagios_installed_version != nagios_version
+
+- name: Write Nagios Core version stamp (idempotency marker)
+  ansible.builtin.copy:
+    content: "{{ nagios_version }}"
+    dest: "{{ nagios_home }}/.ansible_nagios_version"
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: "0644"
+  when: _nagios_installed_version != nagios_version
+
+# ---------------------------------------------------------------------------
+# Nagios Plugins
+# ---------------------------------------------------------------------------
+- name: Check if Nagios Plugins version stamp exists
+  ansible.builtin.stat:
+    path: "{{ nagios_home }}/.ansible_plugins_version"
+  register: _plugins_stamp_file
+
+- name: Read existing Nagios Plugins version stamp
+  ansible.builtin.slurp:
+    src: "{{ nagios_home }}/.ansible_plugins_version"
+  register: _plugins_installed_stamp
+  when: _plugins_stamp_file.stat.exists
+
+- name: Set fact for installed plugins version
+  ansible.builtin.set_fact:
+    _plugins_installed_version: "{{ (_plugins_installed_stamp.content | b64decode | trim) if _plugins_stamp_file.stat.exists else '' }}"
+
+- name: Download Nagios Plugins source tarball
+  ansible.builtin.get_url:
+    url: "{{ nagios_plugins_src_base }}/nagios-plugins-{{ nagios_plugins_version }}.tar.gz"
+    dest: /tmp/nagios-plugins-{{ nagios_plugins_version }}.tar.gz
+    mode: "0644"
+    timeout: 120
+  when: _plugins_installed_version != nagios_plugins_version
+
+- name: Extract Nagios Plugins source
+  ansible.builtin.unarchive:
+    src: /tmp/nagios-plugins-{{ nagios_plugins_version }}.tar.gz
+    dest: /tmp/
+    remote_src: true
+    creates: /tmp/nagios-plugins-{{ nagios_plugins_version }}/configure
+  when: _plugins_installed_version != nagios_plugins_version
+
+- name: Configure Nagios Plugins build
+  ansible.builtin.command:
+    cmd: >
+      ./configure
+      --with-nagios-user={{ nagios_user }}
+      --with-nagios-group={{ nagios_group }}
+    chdir: /tmp/nagios-plugins-{{ nagios_plugins_version }}
+    creates: /tmp/nagios-plugins-{{ nagios_plugins_version }}/Makefile
+  when: _plugins_installed_version != nagios_plugins_version
+
+- name: Compile and install Nagios Plugins
+  ansible.builtin.command:
+    cmd: "{{ item }}"
+    chdir: /tmp/nagios-plugins-{{ nagios_plugins_version }}
+  loop:
+    - make
+    - make install
+  when: _plugins_installed_version != nagios_plugins_version
+  changed_when: true
+
+- name: Write Nagios Plugins version stamp
+  ansible.builtin.copy:
+    content: "{{ nagios_plugins_version }}"
+    dest: "{{ nagios_home }}/.ansible_plugins_version"
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: "0644"
+  when: _plugins_installed_version != nagios_plugins_version
+
+# ---------------------------------------------------------------------------
+# nagiosadmin htpasswd (idempotent via htpasswd module)
+# ---------------------------------------------------------------------------
+- name: Check if nagiosadmin user already exists
+  ansible.builtin.command: "grep -q '^nagiosadmin:' {{ nagios_home }}/etc/htpasswd.users"
+  register: user_exists
+  failed_when: false
+  changed_when: false
+  check_mode: no
+
+- name: Ensure htpasswd file has nagiosadmin entry
+  community.general.htpasswd:
+    path: "{{ nagios_home }}/etc/htpasswd.users"
+    name: nagiosadmin
+    password: "{{ nagiosadmin_pass }}"
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_apache_user }}"
+    mode: "0640"
+    crypt_scheme: md5_crypt
+  when: user_exists.rc != 0
+  changed_when: false
+
+# ---------------------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------------------
+- name: Enable and start Nagios service
+  ansible.builtin.service:
+    name: nagios
+    enabled: true
+    state: started

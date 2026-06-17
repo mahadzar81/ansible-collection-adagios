@@ -1,0 +1,48 @@
+---
+- name: Ensure firewalld and python bindings are installed (RedHat)
+  ansible.builtin.package:
+    name: 
+      - firewalld
+      - python3-firewall
+    state: present
+  when:
+    - ansible_os_family == "RedHat"
+    - nagios_firewall_manage | bool
+
+- name: Ensure firewalld service is started (RedHat)
+  ansible.builtin.service:
+    name: firewalld
+    state: started
+    enabled: true
+  when:
+    - ansible_os_family == "RedHat"
+    - nagios_firewall_manage | bool
+
+- name: Open HTTP port via firewalld (RedHat)
+  ansible.posix.firewalld:
+    service: http
+    zone: "{{ nagios_firewall_zone }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  when:
+    - ansible_os_family == "RedHat"
+    - nagios_firewall_manage | bool
+
+- name: Ensure ufw is installed (Debian)
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+  when:
+    - ansible_os_family == "Debian"
+    - nagios_firewall_manage | bool
+
+- name: Open HTTP port via ufw (Debian)
+  community.general.ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+    state: enabled
+  when:
+    - ansible_os_family == "Debian"
+    - nagios_firewall_manage | bool

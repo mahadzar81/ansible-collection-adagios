@@ -1,0 +1,37 @@
+Alias /adagios/media {{ adagios_install_dir }}/adagios/media
+Alias /adagios/static {{ adagios_install_dir }}/adagios/static
+
+WSGIScriptAlias /adagios {{ adagios_install_dir }}/adagios/wsgi.py
+WSGIDaemonProcess adagios \
+    user={{ nagios_user }} \
+    group={{ nagios_group }} \
+    processes=2 \
+    threads=10 \
+    python-home={{ adagios_venv }} \
+    python-path={{ adagios_install_dir }}
+
+WSGIProcessGroup adagios
+WSGIPassAuthorization On
+
+<Directory {{ adagios_install_dir }}/adagios>
+    <Files wsgi.py>
+        Require all granted
+    </Files>
+</Directory>
+
+<Directory {{ adagios_install_dir }}/adagios/media>
+    Options -Indexes
+    Require all granted
+</Directory>
+
+<Directory {{ adagios_install_dir }}/adagios/static>
+    Options -Indexes
+    Require all granted
+</Directory>
+
+<Location /adagios>
+    AuthType Basic
+    AuthName "Adagios Monitoring"
+    AuthUserFile {{ nagios_home }}/etc/htpasswd.users
+    Require valid-user
+</Location>

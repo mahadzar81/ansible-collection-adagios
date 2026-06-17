@@ -1,0 +1,103 @@
+---
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Lint (yamllint + ansible-lint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lint tools
+        run: |
+          pip install yamllint "ansible-core>=2.15,<2.18" ansible-lint
+
+      - name: Run yamllint
+        run: yamllint .
+
+      - name: Install collection dependencies
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Run ansible-lint
+        run: ansible-lint
+
+  molecule:
+    name: Molecule (${{ matrix.scenario }})
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - default
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # GitHub-hosted runners use cgroup v2. The geerlingguy images expect
+      # cgroup v1 mounts to be writable. This step reconfigures Docker to
+      # use cgroupfs as its cgroup driver so containers start cleanly.
+      - name: Configure Docker for cgroup v2 compatibility
+        run: |
+          sudo mkdir -p /etc/docker
+          echo '{"exec-opts": ["native.cgroupdriver=cgroupfs"]}' \
+            | sudo tee /etc/docker/daemon.json
+          sudo systemctl restart docker
+          sudo systemctl is-active docker
+
+      - name: Install Molecule and dependencies
+        run: |
+          pip install \
+            "molecule>=6.0,<7.0" \
+            "molecule-plugins[docker]" \
+            "ansible-core>=2.15,<2.18" \
+            ansible-lint \
+            "docker>=6.0"
+
+      - name: Install collection requirements
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Run Molecule tests (create → prepare → converge → verify → destroy)
+        run: molecule test --scenario-name ${{ matrix.scenario }}
+        env:
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"
+
+      - name: Idempotency check — converge a second time, expect 0 changed
+        run: |
+          molecule create  --scenario-name ${{ matrix.scenario }}
+          molecule prepare --scenario-name ${{ matrix.scenario }}
+          molecule converge --scenario-name ${{ matrix.scenario }}
+          echo "--- second run ---"
+          molecule converge --scenario-name ${{ matrix.scenario }} 2>&1 | tee /tmp/idempotency.log
+          molecule destroy --scenario-name ${{ matrix.scenario }}
+          if grep -qE '^changed:' /tmp/idempotency.log; then
+            echo "FAIL: tasks reported changed on second converge run:"
+            grep -E '^(TASK|changed:)' /tmp/idempotency.log
+            exit 1
+          fi
+          echo "PASS: no changed tasks on second run."
+        env:
+          PY_COLORS: "1"
+          ANSIBLE_FORCE_COLOR: "1"

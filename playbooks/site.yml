@@ -1,11 +1,17 @@
 ---
-- name: Deploy Nagios Core and Adagios
-  hosts: monitoring_servers
-  become: yes
-  vars:
-    # Override defaults here if needed
-    nagiosadmin_pass: "SecretPass123"
+# Full Adagios stack deployment playbook
+# Usage: ansible-playbook playbooks/site.yml -i inventory/hosts.yml -e @secrets.yml
+- name: Deploy Nagios Core + Adagios monitoring stack
+  hosts: monitoring
+  become: true
+
+  pre_tasks:
+    - name: Gather SELinux facts
+      ansible.builtin.setup:
+        gather_subset:
+          - "!all"
+          - selinux
 
   roles:
-    - nagios_core
-    - adagios
+    - role: mahadzar81.adagios.nagios_core
+    - role: mahadzar81.adagios.adagios

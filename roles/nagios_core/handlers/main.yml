@@ -1,0 +1,16 @@
+---
+- name: Restart nagios
+  ansible.builtin.service:
+    name: nagios
+    state: restarted
+
+- name: Restart apache
+  ansible.builtin.service:
+    name: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
+    state: restarted
+
+- name: Enable nagios apache conf (Debian)
+  ansible.builtin.command:
+    cmd: a2enconf nagios
+  changed_when: true
+  notify: Restart apache

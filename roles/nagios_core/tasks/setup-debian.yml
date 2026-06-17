@@ -1,0 +1,56 @@
+---
+- name: Set nagios_apache_user for Debian family
+  ansible.builtin.set_fact:
+    nagios_apache_user: www-data
+    nagios_apache_conf_dir: /etc/apache2/conf-available
+    nagios_packages: "{{ _nagios_debian_packages }}"
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install Nagios build dependencies (Debian)
+  ansible.builtin.apt:
+    name: "{{ nagios_packages }}"
+    state: present
+
+- name: Ensure nagios group exists
+  ansible.builtin.group:
+    name: "{{ nagios_group }}"
+    state: present
+    system: true
+
+- name: Ensure nagcmd group exists
+  ansible.builtin.group:
+    name: "{{ nagios_cmdgroup }}"
+    state: present
+    system: true
+
+- name: Ensure nagios user exists
+  ansible.builtin.user:
+    name: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    groups: "{{ nagios_cmdgroup }}"
+    comment: "Nagios Monitoring User"
+    home: "{{ nagios_home }}"
+    shell: /usr/sbin/nologin
+    system: true
+    state: present
+    create_home: false
+
+- name: Add www-data to nagcmd group
+  ansible.builtin.user:
+    name: "{{ nagios_apache_user }}"
+    groups: "{{ nagios_cmdgroup }}"
+    append: true
+    state: present
+
+- name: Enable Apache modules (Debian)
+  community.general.apache2_module:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - rewrite
+    - cgi
+  notify: Restart apache

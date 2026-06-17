@@ -1,0 +1,84 @@
+---
+# ---------------------------------------------------------------------------
+# PNP4Nagios — graphing plugin for Nagios, idempotent via version stamp
+# ---------------------------------------------------------------------------
+- name: Check for existing PNP4Nagios version stamp
+  ansible.builtin.slurp:
+    src: "{{ pnp4nagios_install_dir }}/.ansible_pnp4nagios_version"
+  register: _pnp_stamp
+  ignore_errors: true
+
+- name: Set fact for installed PNP4Nagios version
+  ansible.builtin.set_fact:
+    _pnp_installed_version: "{{ (_pnp_stamp.content | b64decode | trim) if not _pnp_stamp.failed else '' }}"
+
+- name: Download PNP4Nagios source
+  ansible.builtin.get_url:
+    url: "{{ pnp4nagios_src_base }}/pnp4nagios-{{ pnp4nagios_version }}.tar.gz"
+    dest: /tmp/pnp4nagios-{{ pnp4nagios_version }}.tar.gz
+    mode: "0644"
+    timeout: 120
+  when: _pnp_installed_version != pnp4nagios_version
+
+- name: Extract PNP4Nagios source
+  ansible.builtin.unarchive:
+    src: /tmp/pnp4nagios-{{ pnp4nagios_version }}.tar.gz
+    dest: /tmp/
+    remote_src: true
+    creates: /tmp/pnp4nagios-{{ pnp4nagios_version }}/configure
+  when: _pnp_installed_version != pnp4nagios_version
+
+- name: Configure PNP4Nagios build
+  ansible.builtin.command:
+    cmd: >
+      ./configure
+      --with-nagios-user={{ nagios_user }}
+      --with-nagios-group={{ nagios_group }}
+      --prefix={{ pnp4nagios_install_dir }}
+    chdir: /tmp/pnp4nagios-{{ pnp4nagios_version }}
+    creates: /tmp/pnp4nagios-{{ pnp4nagios_version }}/Makefile
+  when: _pnp_installed_version != pnp4nagios_version
+
+- name: Compile PNP4Nagios
+  ansible.builtin.command:
+    cmd: make all
+    chdir: /tmp/pnp4nagios-{{ pnp4nagios_version }}
+  when: _pnp_installed_version != pnp4nagios_version
+  changed_when: true
+
+- name: Install PNP4Nagios
+  ansible.builtin.command:
+    cmd: make install
+    chdir: /tmp/pnp4nagios-{{ pnp4nagios_version }}
+    creates: "{{ pnp4nagios_install_dir }}/bin/process_perfdata.pl"
+  when: _pnp_installed_version != pnp4nagios_version
+  notify: Restart nagios
+
+- name: Install PNP4Nagios config
+  ansible.builtin.command:
+    cmd: make install-config
+    chdir: /tmp/pnp4nagios-{{ pnp4nagios_version }}
+    creates: "{{ pnp4nagios_install_dir }}/etc/npcd.cfg"
+  when: _pnp_installed_version != pnp4nagios_version
+
+- name: Install PNP4Nagios init script
+  ansible.builtin.command:
+    cmd: make install-init
+    chdir: /tmp/pnp4nagios-{{ pnp4nagios_version }}
+    creates: /etc/systemd/system/npcd.service
+  when: _pnp_installed_version != pnp4nagios_version
+
+- name: Write PNP4Nagios version stamp
+  ansible.builtin.copy:
+    content: "{{ pnp4nagios_version }}"
+    dest: "{{ pnp4nagios_install_dir }}/.ansible_pnp4nagios_version"
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: "0644"
+  when: _pnp_installed_version != pnp4nagios_version
+
+- name: Enable and start npcd service
+  ansible.builtin.service:
+    name: npcd
+    enabled: true
+    state: started

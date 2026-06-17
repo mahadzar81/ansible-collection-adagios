@@ -1,7 +1,49 @@
-nagios_version: "4.5.0"
-nagios_plugins_version: "2.4.8"
-nagios_user: "nagios"
-nagios_group: "nagios"
-nagios_cmd_group: "nagcmd"
-nagios_home: "/usr/local/nagios"
-nagiosadmin_pass: "Welcome123" # Change this!
+# Package lists by OS family (overridden in tasks via include_vars)
+
+_nagios_redhat_packages:
+  - gcc
+  - glibc
+  - glibc-common
+  - gd
+  - gd-devel
+  - make
+  - wget
+  - unzip
+  - net-snmp
+  - net-snmp-utils
+  - openssl-devel
+  - gettext
+  - automake
+  - autoconf
+  - perl
+  - httpd
+  - php
+  - php-cli
+  - mod_fcgid
+  - python3
+  - python3-pip
+  - python3-passlib
+  - policycoreutils
+  - policycoreutils-python-utils  # for semanage (RHEL8+)
+  - setools-console
+  - libselinux-utils
+  - checkpolicy
+
+_nagios_debian_packages:
+  - autoconf
+  - gcc
+  - libc6
+  - make
+  - wget
+  - unzip
+  - apache2
+  - php
+  - libapache2-mod-php
+  - libgd-dev
+  - libssl-dev
+  - gettext
+  - automake
+  - libperl-dev
+  - python3
+  - python3-pip
+  - python3-passlib

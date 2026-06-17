@@ -1,0 +1,9 @@
+---
+# examples/host_vars/mon01-ubuntu.example.com.yml
+#
+# Host-specific overrides for an Ubuntu monitoring host where SELinux is
+# not present. These override the group_vars/monitoring.yml values.
+
+nagios_selinux_manage: false
+adagios_selinux_manage: false
+nagios_firewall_manage: false   # UFW managed separately on this host

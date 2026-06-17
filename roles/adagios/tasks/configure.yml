@@ -1,0 +1,69 @@
+---
+# ---------------------------------------------------------------------------
+# Adagios configuration — Apache/wsgi setup and adagios.conf
+# All file tasks are idempotent (template + lineinfile)
+# ---------------------------------------------------------------------------
+- name: Deploy Adagios Apache virtual host config
+  ansible.builtin.template:
+    src: adagios_apache.conf.j2
+    dest: "{{ _adagios_apache_conf_dir | default('/etc/httpd/conf.d') }}/adagios.conf"
+    owner: root
+    group: root
+    mode: "0644"
+    backup: true
+  notify: Restart apache
+
+- name: Enable Adagios Apache config symlink (Debian only)
+  ansible.builtin.file:
+    src: /etc/apache2/conf-available/adagios.conf
+    dest: /etc/apache2/conf-enabled/adagios.conf
+    state: link
+  when: ansible_os_family == "Debian"
+  notify: Restart apache
+
+- name: Deploy Adagios settings (adagios.conf)
+  ansible.builtin.template:
+    src: adagios.conf.j2
+    dest: "{{ adagios_install_dir }}/adagios/adagios.conf"
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: "0640"
+    backup: true
+  notify: Restart adagios wsgi
+
+- name: Ensure Adagios log directory exists
+  ansible.builtin.file:
+    path: /var/log/adagios
+    state: directory
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: "0755"
+
+- name: Ensure Adagios run directory exists
+  ansible.builtin.file:
+    path: /var/run/adagios
+    state: directory
+    owner: "{{ nagios_user }}"
+    group: "{{ nagios_group }}"
+    mode: "0755"
+
+- name: Deploy Adagios systemd service unit
+  ansible.builtin.template:
+    src: adagios.service.j2
+    dest: /etc/systemd/system/adagios.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart adagios wsgi
+
+- name: Reload systemd daemon to pick up new unit
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start Adagios service
+  ansible.builtin.service:
+    name: adagios
+    enabled: true
+    state: started

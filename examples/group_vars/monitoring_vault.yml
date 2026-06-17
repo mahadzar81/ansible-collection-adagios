@@ -1,0 +1,21 @@
+---
+# examples/group_vars/monitoring_vault.yml
+#
+# This file MUST be encrypted with ansible-vault before committing.
+#
+# To encrypt:
+#   ansible-vault encrypt examples/group_vars/monitoring_vault.yml
+#
+# To create from scratch:
+#   ansible-vault create examples/group_vars/monitoring_vault.yml
+#
+# To edit an already-encrypted file:
+#   ansible-vault edit examples/group_vars/monitoring_vault.yml
+#
+# To run a playbook using this vault:
+#   ansible-playbook playbooks/site.yml -i examples/inventory/hosts.yml --ask-vault-pass
+#   # or with a vault password file:
+#   ansible-playbook playbooks/site.yml -i examples/inventory/hosts.yml --vault-password-file ~/.vault_pass
+
+# Web UI password for the nagiosadmin account (referenced in monitoring.yml)
+vault_nagiosadmin_pass: "CHANGE_ME_use_a_strong_password"

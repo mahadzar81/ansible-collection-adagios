@@ -1,0 +1,40 @@
+module adagios_custom 1.0;
+
+require {
+    type httpd_t;
+    type httpd_exec_t;
+    type httpd_sys_content_t;
+    type httpd_log_t;
+    type httpd_var_run_t;
+    type nagios_rw_t;
+    type nagios_var_run_t;
+    type var_run_t;
+    class file   { read write execute execute_no_trans open getattr setattr create unlink };
+    class dir    { read write search open getattr add_name remove_name };
+    class sock_file { read write open getattr };
+    class unix_stream_socket { connectto };
+}
+
+# Allow httpd to execute Python interpreter inside the virtualenv
+allow httpd_t httpd_exec_t:file { execute execute_no_trans open read getattr };
+
+# Allow httpd to read/write Adagios content
+allow httpd_t httpd_sys_content_t:dir  { read write search open getattr add_name remove_name };
+allow httpd_t httpd_sys_content_t:file { read write open getattr create unlink };
+
+# Allow httpd to write Adagios logs
+allow httpd_t httpd_log_t:file { read write open getattr create };
+allow httpd_t httpd_log_t:dir  { read write search open getattr add_name remove_name };
+
+# Allow httpd to write Adagios PID/socket files
+allow httpd_t httpd_var_run_t:file { read write open getattr create unlink };
+allow httpd_t httpd_var_run_t:dir  { read write search open getattr add_name remove_name };
+
+# Allow httpd to connect to the MK Livestatus Unix socket
+allow httpd_t nagios_var_run_t:dir      { search open getattr };
+allow httpd_t nagios_var_run_t:sock_file { read write open getattr };
+allow httpd_t nagios_var_run_t:unix_stream_socket connectto;
+
+# Allow httpd to write to Nagios external command pipe (via Adagios)
+allow httpd_t nagios_rw_t:file      { read write open getattr };
+allow httpd_t nagios_rw_t:dir       { read write search open getattr add_name remove_name };

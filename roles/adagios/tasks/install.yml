@@ -1,0 +1,136 @@
+---
+- name: Clone Adagios Repo to a source directory
+  git:
+    repo: "{{ adagios_repo }}"
+    dest: /usr/local/src/adagios-source
+    version: master 
+    update: yes
+
+- name: Ensure /opt/adagios directory exists
+  file:
+    path: /opt/adagios
+    state: directory
+
+- name: Copy Adagios files to operational directory
+  command: cp -a /usr/local/src/adagios-source/. /opt/adagios/
+  args:
+    creates: /opt/adagios/adagios/etc/adagios/adagios.conf
+
+- name: Create Adagios config directory
+  file:
+    path: /etc/adagios
+    state: directory
+    owner: nagios
+    group: nagios
+    mode: '0775'
+
+- name: Create Adagios data and userdata directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: nagios
+    group: nagios
+    mode: '0775'
+  loop:
+    - /var/lib/adagios
+    - /var/lib/adagios/userdata
+
+- name: Create Adagios object directory
+  file:
+    path: /etc/nagios/adagios
+    state: directory
+    owner: nagios
+    group: nagios
+    mode: '0775'
+
+- name: Ensure nagios.cfg includes the Adagios object directory
+  lineinfile:
+    path: /usr/local/nagios/etc/nagios.cfg
+    regexp: '^cfg_dir=/etc/nagios/adagios'
+    line: 'cfg_dir=/etc/nagios/adagios'
+    state: present
+  notify: Restart nagios
+
+- name: Copy sample config if not present
+  copy:
+    src: /opt/adagios/adagios/etc/adagios/adagios.conf
+    dest: /etc/adagios/adagios.conf
+    remote_src: yes
+    force: no
+
+- name: Determine if pip requires break-system-packages
+  set_fact:
+    pip_break_args: >-
+      {%- if (ansible_distribution == 'Ubuntu' and ansible_distribution_version is version('23.04', '>=')) or
+             (ansible_distribution == 'Debian' and ansible_distribution_major_version is version('12', '>=')) or
+             (ansible_os_family == 'RedHat' and ansible_distribution_major_version is version('10', '>=')) -%}
+      --break-system-packages
+      {%- else -%}
+      {%- endif -%}
+
+- name: Install Python build tools and requirements
+  pip:
+    name: 
+      - wheel
+      - setuptools
+      - future
+    executable: pip3
+    state: present
+    extra_args: "{{ pip_break_args if pip_break_args else omit }}"
+
+- name: Install Adagios requirements from file
+  pip:
+    requirements: /opt/adagios/requirements.txt
+    executable: pip3
+    extra_args: "{{ pip_break_args if pip_break_args else omit }}"
+
+- name: Patch Adagios settings.py for Python 3 compatibility
+  ansible.builtin.replace:
+    path: /opt/adagios/adagios/settings.py
+    regexp: '\[ord\(x\)\s+for\s+x\s+in\s+os\.urandom\(length\)\]'
+    replace: 'os.urandom(length)'
+    backup: true
+  when: (ansible_python.version.major | default(2) | int) >= 3
+
+- name: Check if Adagios is already installed
+  ansible.builtin.command: pip3 show adagios
+  register: adagios_check
+  changed_when: false
+  failed_when: false
+
+- name: Install Adagios from source
+  ansible.builtin.pip:
+    name: /opt/adagios
+    executable: pip3
+    state: present
+    extra_args: "--no-build-isolation{% if pip_break_args %} {{ pip_break_args }}{% endif %}"
+  when: adagios_check.rc != 0
+
+- name: Configure Adagios to use the correct nagios.cfg path
+  lineinfile:
+    path: /etc/adagios/adagios.conf
+    regexp: '^\s*nagios_config\s*='
+    line: 'nagios_config = "/usr/local/nagios/etc/nagios.cfg"'
+    state: present
+  notify: Restart apache
+
+- name: Configure Adagios destination directory
+  lineinfile:
+    path: /etc/adagios/adagios.conf
+    regexp: '^\s*destination_directory\s*='
+    line: 'destination_directory = "/etc/nagios/adagios/"'
+    state: present
+  notify: Restart apache
+
+# - name: Configure Adagios Apache Config
+#   template:
+#     src: adagios.conf.j2
+#     dest: "{{ _adagios_apache_conf_dir }}/adagios.conf"
+#   notify: Restart apache
+
+- name: Ensure Nagios group has write access to config (Idempotent version)
+  ansible.builtin.file:
+    path: /usr/local/nagios/etc
+    state: directory
+    recurse: yes
+    mode: 'u=rwX,g=rwX,o=rX'

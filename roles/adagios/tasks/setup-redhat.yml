@@ -1,0 +1,59 @@
+---
+- name: Install EPEL release (RedHat)
+  ansible.builtin.package:
+    name: epel-release
+    state: present
+
+- name: Ensure dnf-plugins-core is installed for config-manager (RedHat 8+)
+  ansible.builtin.package:
+    name: dnf-plugins-core
+    state: present
+  when: ansible_distribution_major_version | default('7') | int >= 8
+
+- name: Enable PowerTools repository (RedHat 8)
+  ansible.builtin.command: dnf config-manager --set-enabled powertools
+  when: ansible_distribution_major_version | default('7') | int == 8
+  changed_when: false
+  failed_when: false
+
+- name: Enable CRB repository (RedHat 9+)
+  ansible.builtin.command: dnf config-manager --set-enabled crb
+  when: ansible_distribution_major_version | default('7') | int >= 9
+  changed_when: false
+  failed_when: false
+
+- name: Install Adagios dependencies (RedHat)
+  ansible.builtin.package:
+    name:
+      - git
+      - python3
+      - python3-pip
+      - python3-devel
+      - python3-virtualenv
+      - gcc
+      - make
+      - wget
+      - libffi-devel
+      - openssl-devel
+      - rrdtool
+      - rrdtool-devel
+      - perl-Time-HiRes
+      - perl-Crypt-DES
+      - perl-Digest-HMAC
+      - perl-Digest-SHA1
+      - perl-IO-Socket-INET6
+      - net-snmp-perl
+      - boost-devel
+      - rrdtool-perl
+      - libstdc++-static
+      - glibc-static
+      - python3-mod_wsgi
+    state: present
+
+- name: Install pip packages needed for Adagios (RedHat)
+  ansible.builtin.pip:
+    name:
+      - virtualenv
+      - setuptools
+    state: present
+    executable: pip3

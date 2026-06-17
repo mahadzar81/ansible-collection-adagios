@@ -51,4 +51,4 @@
     path: /usr/local/nagios/etc/nagios.cfg
     line: "broker_module=/usr/local/lib/mk-livestatus/livestatus.o /usr/local/nagios/var/rw/live"
     state: present
-  notify: restart nagios
+  notify: Restart nagios

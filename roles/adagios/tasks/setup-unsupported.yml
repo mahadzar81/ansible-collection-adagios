@@ -1,0 +1,6 @@
+---
+- name: Fail on unsupported OS
+  ansible.builtin.fail:
+    msg: >
+      Unsupported OS: {{ ansible_distribution }} {{ ansible_distribution_version }}.
+      This collection supports RedHat/Rocky/AlmaLinux/CentOS and Debian/Ubuntu families only.

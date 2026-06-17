@@ -1,0 +1,38 @@
+---
+- name: Install Nagios Apache config (RedHat)
+  ansible.builtin.command:
+    cmd: "make install-webconf HTTPD_CONF={{ nagios_apache_conf_dir }}"
+    chdir: /tmp/nagios-{{ nagios_version }}
+    creates: "{{ nagios_apache_conf_dir }}/nagios.conf"
+  when:
+    - ansible_os_family == "RedHat"
+    - _nagios_installed_version != nagios_version
+  notify:
+    - Restart apache
+    - Restart nagios
+
+- name: Install Nagios Apache config (Debian)
+  ansible.builtin.command:
+    cmd: "make install-webconf HTTPD_CONF=/etc/apache2/conf-available"
+    chdir: /tmp/nagios-{{ nagios_version }}
+    creates: /etc/apache2/conf-available/nagios.conf
+  when:
+    - ansible_os_family == "Debian"
+    - _nagios_installed_version != nagios_version
+  notify:
+    - Enable nagios apache conf (Debian)
+    - Restart apache
+
+- name: Enable Nagios Apache config symlink (Debian)
+  ansible.builtin.file:
+    src: /etc/apache2/conf-available/nagios.conf
+    dest: /etc/apache2/conf-enabled/nagios.conf
+    state: link
+  when: ansible_os_family == "Debian"
+  notify: Restart apache
+
+- name: Ensure Apache/httpd service is enabled and started
+  ansible.builtin.service:
+    name: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
+    enabled: true
+    state: started

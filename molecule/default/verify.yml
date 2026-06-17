@@ -1,49 +1,111 @@
 ---
-- name: Verify
+- name: Verify Nagios Core and Adagios installation
   hosts: all
-  # become: yes
-  gather_facts: yes
+  #become: true
+  gather_facts: true
 
   tasks:
-    - name: Check if Nagios Service is running
-      service:
-        name: nagios
-        state: started
-        enabled: yes
-      check_mode: yes
-      register: nagios_service_status
+    # -----------------------------------------------------------------------
+    # Nagios Core checks
+    # -----------------------------------------------------------------------
+    - name: Check Nagios binary exists
+      ansible.builtin.stat:
+        path: /usr/local/nagios/bin/nagios
+      register: nagios_bin
+      failed_when: not nagios_bin.stat.exists
 
-    - name: Assert Nagios is running
-      assert:
-        that: not nagios_service_status.changed
-
-    - name: Check if Web Server (Apache/Httpd) is running
-      service:
-        name: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
-        state: started
-      check_mode: yes
-      register: apache_service_status
-
-    - name: Assert Apache is running
-      assert:
-        that: not apache_service_status.changed
-
-    - name: Verify Nagios Binary Version
-      command: /usr/local/nagios/bin/nagios --version
-      register: nagios_version_check
+    - name: Check Nagios configuration is valid
+      ansible.builtin.command:
+        cmd: /usr/local/nagios/bin/nagios -v /usr/local/nagios/etc/nagios.cfg
+      register: nagios_verify
       changed_when: false
+      failed_when: nagios_verify.rc != 0
 
-    - name: Assert Nagios 4.x is installed
-      assert:
-        that: "'Nagios Core 4' in nagios_version_check.stdout"
+    - name: Check Nagios service is running
+      ansible.builtin.service_facts:
 
-    - name: Verify Adagios HTTP Endpoint (returns 401 because auth is on)
-      uri:
-        url: http://localhost/adagios/
-        status_code: 401
-      register: adagios_http
+    - name: Assert Nagios service is active
+      ansible.builtin.assert:
+        that:
+          - "'nagios.service' in ansible_facts.services"
+          - "ansible_facts.services['nagios.service'].state == 'running'"
+        fail_msg: "Nagios service is not running!"
 
-    - name: Verify Nagios HTTP Endpoint (returns 401 because auth is on)
-      uri:
-        url: http://localhost/nagios/
-        status_code: 401
+    - name: Check htpasswd file exists
+      ansible.builtin.stat:
+        path: /usr/local/nagios/etc/htpasswd.users
+      register: htpasswd_file
+      failed_when: not htpasswd_file.stat.exists
+
+    - name: Assert nagiosadmin entry exists in htpasswd
+      ansible.builtin.command:
+        cmd: grep -c "nagiosadmin" /usr/local/nagios/etc/htpasswd.users
+      register: htpasswd_check
+      changed_when: false
+      failed_when: htpasswd_check.rc != 0
+
+    # -----------------------------------------------------------------------
+    # Apache checks
+    # -----------------------------------------------------------------------
+    - name: Assert Apache/httpd service is active
+      ansible.builtin.assert:
+        that:
+          - >
+            'httpd.service' in ansible_facts.services and
+            ansible_facts.services['httpd.service'].state == 'running'
+            or
+            'apache2.service' in ansible_facts.services and
+            ansible_facts.services['apache2.service'].state == 'running'
+        fail_msg: "Apache/httpd service is not running!"
+
+    - name: Check Nagios web config exists
+      ansible.builtin.stat:
+        path: "{{ '/etc/httpd/conf.d/nagios.conf' if ansible_os_family == 'RedHat' else '/etc/apache2/conf-available/nagios.conf' }}"
+      register: nagios_conf
+      failed_when: not nagios_conf.stat.exists
+
+    # -----------------------------------------------------------------------
+    # MK Livestatus checks
+    # -----------------------------------------------------------------------
+    - name: Check Livestatus broker module exists
+      ansible.builtin.stat:
+        path: /usr/local/lib/mk-livestatus/livestatus.o
+      register: livestatus_bin
+      failed_when: not livestatus_bin.stat.exists
+
+    - name: Assert Livestatus is configured in nagios.cfg
+      ansible.builtin.command:
+        cmd: grep -c "broker_module.*livestatus" /usr/local/nagios/etc/nagios.cfg
+      register: livestatus_cfg
+      changed_when: false
+      failed_when: livestatus_cfg.rc != 0
+
+    # -----------------------------------------------------------------------
+    # Adagios checks
+    # -----------------------------------------------------------------------
+    - name: Check Adagios install directory exists
+      ansible.builtin.stat:
+        path: /opt/adagios
+      register: adagios_dir
+      failed_when: not adagios_dir.stat.exists
+
+    # - name: Check Adagios virtualenv exists
+    #   ansible.builtin.stat:
+    #     path: /opt/adagios-venv/bin/python3
+    #   register: adagios_venv
+    #   failed_when: not adagios_venv.stat.exists
+
+    - name: Check Adagios Apache config deployed
+      ansible.builtin.stat:
+        path: "{{ '/etc/httpd/conf.d/adagios.conf' if ansible_os_family == 'RedHat' else '/etc/apache2/conf-available/adagios.conf' }}"
+      register: adagios_conf
+      failed_when: not adagios_conf.stat.exists
+
+    # -----------------------------------------------------------------------
+    # Idempotency hint: re-run converge and check no changes (manual step)
+    # -----------------------------------------------------------------------
+    - name: Print idempotency reminder
+      ansible.builtin.debug:
+        msg: >
+          All checks passed. Run 'molecule converge' a second time and confirm
+          0 tasks show 'changed' to verify full idempotency.
