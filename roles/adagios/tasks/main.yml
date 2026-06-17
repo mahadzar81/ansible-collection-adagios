@@ -22,7 +22,7 @@
   ansible.builtin.include_tasks: configure.yml
 
 - name: Manage SELinux policy for Adagios
-  ansible.builtin.include_tasks: selinux.yml
+  ansible.builtin.import_tasks: selinux.yml
   when:
     - adagios_selinux_manage | bool
     - ansible_selinux is defined
