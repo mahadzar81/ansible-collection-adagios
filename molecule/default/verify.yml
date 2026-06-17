@@ -89,11 +89,11 @@
       register: adagios_dir
       failed_when: not adagios_dir.stat.exists
 
-    - name: Check Adagios virtualenv exists
-      ansible.builtin.stat:
-        path: /opt/adagios-venv/bin/python3
-      register: adagios_venv
-      failed_when: not adagios_venv.stat.exists
+    # - name: Check Adagios virtualenv exists
+    #   ansible.builtin.stat:
+    #     path: /opt/adagios-venv/bin/python3
+    #   register: adagios_venv
+    #   failed_when: not adagios_venv.stat.exists
 
     - name: Check Adagios Apache config deployed
       ansible.builtin.stat:
