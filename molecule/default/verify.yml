@@ -69,7 +69,7 @@
     # -----------------------------------------------------------------------
     - name: Check Livestatus broker module exists
       ansible.builtin.stat:
-        path: /usr/local/lib/nagios/brokers/livestatus.o
+        path: /usr/local/lib/mk-livestatus/livestatus.o
       register: livestatus_bin
       failed_when: not livestatus_bin.stat.exists
 
