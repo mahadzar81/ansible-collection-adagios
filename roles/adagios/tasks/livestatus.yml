@@ -11,8 +11,6 @@
   block:
     - name: Download MK Livestatus
       get_url:
-        #url: "https://download.checkmk.com/checkmk/archive/{{ livestatus_version }}/mk-livestatus-{{ livestatus_version }}.tar.gz"
-        # Download from Alternative (GitHub Mirror) since checkmk URL require authentication
         url: "https://github.com/EdCa361/mk_livestatus-for-Nagios-4.5.X/archive/refs/heads/main.zip"
         dest: "/tmp/main.zip"
         timeout: 30
@@ -24,7 +22,7 @@
       unarchive:
         src: "/tmp/main.zip"
         dest: "/tmp"
-        remote_src: yes
+        remote_src: true
         # create: prevents re-extraction if the directory exists (optional, but good for speed)
         creates: "/tmp/mk_livestatus-for-Nagios-4.5.X-main"
 

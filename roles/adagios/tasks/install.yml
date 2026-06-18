@@ -3,8 +3,8 @@
   git:
     repo: "{{ adagios_repo }}"
     dest: /usr/local/src/adagios-source
-    version: master 
-    update: yes
+    version: master
+    update: true
 
 - name: Ensure /opt/adagios directory exists
   file:
@@ -55,8 +55,8 @@
   copy:
     src: /opt/adagios/adagios/etc/adagios/adagios.conf
     dest: /etc/adagios/adagios.conf
-    remote_src: yes
-    force: no
+    remote_src: true
+    force: false
 
 - name: Determine if pip requires break-system-packages
   set_fact:
@@ -70,7 +70,7 @@
 
 - name: Install Python build tools and requirements
   pip:
-    name: 
+    name:
       - wheel
       - setuptools
       - future
@@ -132,5 +132,5 @@
   ansible.builtin.file:
     path: /usr/local/nagios/etc
     state: directory
-    recurse: yes
+    recurse: true
     mode: 'u=rwX,g=rwX,o=rX'

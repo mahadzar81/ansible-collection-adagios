@@ -1,5 +1,5 @@
+---
 name: Molecule CI
-
 on:
   push:
     branches: [ "main", "master", "fix-*", "dev-*"]
@@ -14,7 +14,6 @@ jobs:
   molecule:
     name: Molecule
     runs-on: ubuntu-latest
-    
     # Define your collection metadata here to match galaxy.yml
     env:
       NAMESPACE: mahadzar81

@@ -1,5 +1,5 @@
 # Package lists by OS family (overridden in tasks via include_vars)
-
+---
 _nagios_redhat_packages:
   - gcc
   - glibc

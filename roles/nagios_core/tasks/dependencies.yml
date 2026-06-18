@@ -3,7 +3,7 @@
   package:
     name: "{{ system_packages }}"
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Create Nagios user and group
   group:
@@ -20,10 +20,10 @@
     name: "{{ nagios_user }}"
     group: "{{ nagios_group }}"
     groups: "{{ nagios_cmd_group }}"
-    append: yes
+    append: true
 
 - name: Add Apache user to Nagcmd group
   user:
     name: "{{ 'apache' if ansible_os_family == 'RedHat' else 'www-data' }}"
     groups: "{{ nagios_cmd_group }}"
-    append: yes
+    append: true

@@ -1,7 +1,7 @@
 ---
 - name: Ensure firewalld and python bindings are installed (RedHat)
   ansible.builtin.package:
-    name: 
+    name:
       - firewalld
       - python3-firewall
     state: present
