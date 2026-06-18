@@ -29,7 +29,7 @@ jobs:
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Assert galaxy.yml version matches tag
         run: |
@@ -54,7 +54,7 @@ jobs:
       tarball: ${{ steps.build.outputs.tarball }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -90,7 +90,7 @@ jobs:
       - build
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0   # Full history for changelog generation
 
