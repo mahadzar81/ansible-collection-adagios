@@ -1,7 +1,7 @@
 ---
 namespace: mahadzar81
 name: adagios
-version: 1.2.0
+version: 1.0.11
 readme: README.md
 description: >
   Ansible collection to deploy Nagios Core 4.x and Adagios web UI,
@@ -18,6 +18,6 @@ tags:
   - selinux
 dependencies: {}
 repository: https://github.com/mahadzar81/ansible-collection-adagios
-documentation: https://github.com/mahadzar81/ansible-collection-adagios/blob/main/README.md
+documentation: http://adagios.org/
 homepage: https://github.com/mahadzar81/ansible-collection-adagios
 issues: https://github.com/mahadzar81/ansible-collection-adagios/issues
